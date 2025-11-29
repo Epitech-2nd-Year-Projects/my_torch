@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "my-torch"
+version = "0.1.0"
+description = "Neural network tooling and analyzer for the my_torch project."
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[project.scripts]
+my_torch_analyzer = "my_torch_analyzer:main"
+
+[tool.setuptools]
+packages = ["my_torch", "my_torch_analyzer"]
