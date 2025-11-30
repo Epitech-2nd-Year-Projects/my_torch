@@ -15,12 +15,18 @@ def relu_derivative(x: np.ndarray) -> np.ndarray:
 
 def sigmoid(x: np.ndarray) -> np.ndarray:
     """Sigmoid activation with stable computation"""
-    return 1 / (1 + np.exp(-x))
+    return np.where(
+        x >= 0,
+        1 / (1 + np.exp(-x)),
+        np.exp(x) / (1 + np.exp(x)),
+    )
 
 
-def sigmoid_derivative(x: np.ndarray) -> np.ndarray:
-    """Derivative of sigmoid with respect to x"""
-    s = sigmoid(x)
+def sigmoid_derivative(
+    x: np.ndarray, sigmoid_output: np.ndarray | None = None
+) -> np.ndarray:
+    """Derivative of sigmoid with optional precomputed output"""
+    s = sigmoid_output if sigmoid_output is not None else sigmoid(x)
     return s * (1 - s)
 
 
@@ -29,9 +35,11 @@ def tanh(x: np.ndarray) -> np.ndarray:
     return np.tanh(x)
 
 
-def tanh_derivative(x: np.ndarray) -> np.ndarray:
-    """Derivative of tanh with respect to x"""
-    t = np.tanh(x)
+def tanh_derivative(
+    x: np.ndarray, tanh_output: np.ndarray | None = None
+) -> np.ndarray:
+    """Derivative of tanh with optional precomputed output"""
+    t = tanh_output if tanh_output is not None else np.tanh(x)
     return 1 - t**2
 
 
@@ -42,9 +50,11 @@ def softmax(x: np.ndarray, axis: int = -1) -> np.ndarray:
     return exps / np.sum(exps, axis=axis, keepdims=True)
 
 
-def softmax_derivative(x: np.ndarray, axis: int = -1) -> np.ndarray:
-    """Jacobian of softmax with respect to x along the given axis"""
-    s = softmax(x, axis=axis)
+def softmax_derivative(
+    x: np.ndarray, axis: int = -1, softmax_output: np.ndarray | None = None
+) -> np.ndarray:
+    """Jacobian of softmax with optional precomputed output"""
+    s = softmax_output if softmax_output is not None else softmax(x, axis=axis)
     s_moved = np.moveaxis(s, axis, -1)
     outer = np.einsum("...i,...j->...ij", s_moved, s_moved)
     jacobian = -outer
