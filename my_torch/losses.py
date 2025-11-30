@@ -23,12 +23,24 @@ def _validate_class_targets(logits: ArrayFloat, target: ArrayInt) -> tuple[Array
         raise ValueError("target must match the batch dimension of logits")
     if not np.issubdtype(target_array.dtype, np.integer):
         raise TypeError("target must contain integer class indices")
+    num_classes = logits_array.shape[1]
+    if np.any((target_array < 0) | (target_array >= num_classes)):
+        raise ValueError("target indices must be in [0, num_classes)")
     return logits_array, target_array
 
 
 def cross_entropy_loss(logits: ArrayFloat, target: ArrayInt) -> float:
     """
-    Compute the mean cross-entropy loss from unnormalized logits and class indices.
+    Mean cross-entropy from unnormalized logits and integer class targets
+
+    Args:
+        logits: 2D array shaped (batch_size, num_classes)
+        target: 1D integer array of length batch_size
+    Returns:
+        Mean scalar loss
+    Raises:
+        ValueError: when shapes do not align
+        TypeError: when targets are not integer indices
     """
     logits_array, target_array = _validate_class_targets(logits, target)
     shifted = logits_array - np.max(logits_array, axis=1, keepdims=True)
@@ -40,13 +52,22 @@ def cross_entropy_loss(logits: ArrayFloat, target: ArrayInt) -> float:
 
 def cross_entropy_grad(logits: ArrayFloat, target: ArrayInt) -> ArrayFloat:
     """
-    Compute the gradient of mean cross-entropy loss with respect to logits.
+    Gradient of mean cross-entropy loss with respect to logits
+
+    Args:
+        logits: 2D array shaped (batch_size, num_classes)
+        target: 1D integer array of length batch_size
+    Returns:
+        Array matching logits shape containing dL/dlogits, averaged over the batch
+    Raises:
+        ValueError: when shapes do not align
+        TypeError: when targets are not integer indices
     """
     logits_array, target_array = _validate_class_targets(logits, target)
     shifted = logits_array - np.max(logits_array, axis=1, keepdims=True)
     exp_shifted = np.exp(shifted)
     probabilities = exp_shifted / np.sum(exp_shifted, axis=1, keepdims=True)
-    grad = probabilities
+    grad = probabilities.copy()
     grad[np.arange(logits_array.shape[0]), target_array] -= 1
     grad /= logits_array.shape[0]
     return grad
@@ -54,7 +75,15 @@ def cross_entropy_grad(logits: ArrayFloat, target: ArrayInt) -> ArrayFloat:
 
 def mse_loss(prediction: ArrayFloat, target: ArrayFloat) -> float:
     """
-    Compute mean squared error between predictions and targets.
+    Mean squared error between predictions and targets
+
+    Args:
+        prediction: array of predictions
+        target: array with the same shape as prediction
+    Returns:
+        Mean scalar loss
+    Raises:
+        ValueError: when shapes differ
     """
     prediction_array = np.asarray(prediction, dtype=float)
     target_array = np.asarray(target, dtype=float)
@@ -66,7 +95,15 @@ def mse_loss(prediction: ArrayFloat, target: ArrayFloat) -> float:
 
 def mse_grad(prediction: ArrayFloat, target: ArrayFloat) -> ArrayFloat:
     """
-    Compute the gradient of mean squared error with respect to predictions.
+    Gradient of mean squared error with respect to predictions
+
+    Args:
+        prediction: array of predictions
+        target: array with the same shape as prediction
+    Returns:
+        Array matching prediction shape containing dL/dprediction
+    Raises:
+        ValueError: when shapes differ
     """
     prediction_array = np.asarray(prediction, dtype=float)
     target_array = np.asarray(target, dtype=float)
