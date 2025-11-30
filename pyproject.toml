@@ -10,10 +10,31 @@ requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "ruff>=0.1.0"]
+dev = ["pytest>=7.0", "ruff>=0.1.0", "black>=24.4.2"]
 
 [project.scripts]
 my_torch_analyzer = "my_torch_analyzer:main"
 
 [tool.setuptools]
 packages = ["my_torch", "my_torch_analyzer"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+extend-exclude = '''
+/(
+    \.venv
+  | build
+  | dist
+  | \.pytest_cache
+  | \.mypy_cache
+)/
+'''
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+extend-exclude = ["build", "dist", ".venv", ".pytest_cache", ".mypy_cache"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
