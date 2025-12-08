@@ -24,12 +24,16 @@ class Optimizer(Protocol):
 
 @dataclass(slots=True)
 class EpochMetrics:
+    """Loss and accuracy metrics for a single epoch."""
+
     loss: float
     accuracy: float
 
 
 @dataclass(slots=True)
 class TrainingHistory:
+    """Per-epoch metrics for a full training run."""
+
     train: list[EpochMetrics]
     validation: list[EpochMetrics]
 
