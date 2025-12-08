@@ -14,7 +14,7 @@ LossFn = Callable[[ArrayFloat, ArrayInt], float]
 LossGradFn = Callable[[ArrayFloat, ArrayInt], ArrayFloat]
 AccuracyFn = Callable[[ArrayFloat, ArrayInt], float]
 
-__all__ = ["EpochMetrics", "TrainingHistory", "train"]
+__all__ = ["EpochMetrics", "TrainingHistory", "train_validation_split", "train"]
 
 
 class Optimizer(Protocol):
@@ -52,6 +52,57 @@ def _validate_inputs(inputs: ArrayFloat, labels: ArrayInt) -> tuple[ArrayFloat, 
     if not np.issubdtype(labels_array.dtype, np.integer):
         raise TypeError("labels must contain integer class indices")
     return inputs_array, labels_array
+
+
+def train_validation_split(
+    inputs: ArrayFloat,
+    labels: ArrayInt,
+    *,
+    val_ratio: float = 0.2,
+    shuffle: bool = True,
+    seed: int | None = None,
+    rng: np.random.Generator | None = None,
+) -> tuple[ArrayFloat, ArrayFloat, ArrayInt, ArrayInt]:
+    """
+    Split inputs and labels into training and validation subsets
+
+    Args:
+        inputs: Feature array shaped (num_samples, num_features)
+        labels: Integer class labels shaped (num_samples,)
+        val_ratio: Fraction of data to place in the validation set (0, 1)
+        shuffle: Whether to shuffle before splitting
+        seed: Optional seed used when constructing the RNG
+        rng: Optional NumPy Generator; cannot be combined with seed
+    Returns:
+        Tuple of (train_inputs, val_inputs, train_labels, val_labels)
+    Raises:
+        ValueError: when ratios are invalid or splits would be empty
+        TypeError: when labels are not integer class indices
+    """
+    if rng is not None and seed is not None:
+        raise ValueError("provide either rng or seed, not both")
+    inputs_array, labels_array = _validate_inputs(inputs, labels)
+    num_samples = inputs_array.shape[0]
+    if num_samples == 0:
+        raise ValueError("cannot split an empty dataset")
+    if not 0.0 < val_ratio < 1.0:
+        raise ValueError("val_ratio must be between 0 and 1 (exclusive)")
+
+    val_size = int(np.floor(num_samples * val_ratio))
+    if val_size == 0 or val_size == num_samples:
+        raise ValueError("val_ratio produces an empty train or validation split")
+
+    rng_instance = rng if rng is not None else np.random.default_rng(seed)
+    indices = rng_instance.permutation(num_samples) if shuffle else np.arange(num_samples)
+    val_indices = indices[:val_size]
+    train_indices = indices[val_size:]
+
+    return (
+        inputs_array[train_indices],
+        inputs_array[val_indices],
+        labels_array[train_indices],
+        labels_array[val_indices],
+    )
 
 
 def _iter_batches(inputs: ArrayFloat, labels: ArrayInt, batch_size: int) -> Iterator[tuple[ArrayFloat, ArrayInt]]:
