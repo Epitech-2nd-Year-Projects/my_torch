@@ -10,6 +10,11 @@ from .activations import (
     tanh,
     tanh_derivative,
 )
+from .initializers import (
+    get_initializer,
+    initialize_bias,
+    initialize_weights,
+)
 from .losses import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
 
 __all__ = [
@@ -25,4 +30,7 @@ __all__ = [
     "cross_entropy_grad",
     "mse_loss",
     "mse_grad",
+    "get_initializer",
+    "initialize_weights",
+    "initialize_bias",
 ]
