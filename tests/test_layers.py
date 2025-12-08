@@ -3,8 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from my_torch import DenseLayer, relu, relu_derivative
-from .optimizers import SGD
+from my_torch import DenseLayer, SGD, relu, relu_derivative
 
 
 def test_dense_layer_preserves_shapes() -> None:

@@ -3,8 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from my_torch import DenseLayer, NeuralNetwork, mse_grad, mse_loss, relu, relu_derivative
-from .optimizers import SGD
+from my_torch import DenseLayer, NeuralNetwork, SGD, mse_grad, mse_loss, relu, relu_derivative
 
 
 def test_network_keeps_batch_and_feature_shapes() -> None:
