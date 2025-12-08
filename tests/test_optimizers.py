@@ -40,6 +40,12 @@ def test_zero_grad_clears_all_gradients() -> None:
     assert all(np.all(g == 0) for g in grads)
 
 
+def test_step_requires_matching_lengths() -> None:
+    optimizer = SGD(lr=0.1)
+    with pytest.raises(ValueError, match="same length"):
+        optimizer.step([np.ones((2, 2))], [])
+
+
 @pytest.mark.parametrize("lr, weight_decay", [(-0.1, 0.0), (0.0, 0.0), (0.1, -0.5)])
 def test_invalid_hyperparameters_raise(lr: float, weight_decay: float) -> None:
     with pytest.raises(ValueError):

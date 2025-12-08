@@ -69,6 +69,11 @@ class SGD:
 
     @staticmethod
     def zero_grad(gradients: Iterable[ArrayFloat]) -> None:
-        """In-place zeroing helper for a collection of gradient arrays."""
+        """
+        Zero out all gradient arrays in place.
+
+        Args:
+            gradients: Iterable of gradient arrays to be zeroed.
+        """
         for grad in gradients:
             np.asarray(grad).fill(0.0)
