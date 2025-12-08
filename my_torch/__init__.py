@@ -15,6 +15,7 @@ from .initializers import (
     initialize_bias,
     initialize_weights,
 )
+from .layers import DenseLayer
 from .losses import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     "get_initializer",
     "initialize_weights",
     "initialize_bias",
+    "DenseLayer",
 ]
