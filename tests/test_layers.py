@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from my_torch import DenseLayer, relu, relu_derivative
+from .optimizers import SGD
 
 
 def test_dense_layer_preserves_shapes() -> None:
@@ -64,13 +65,6 @@ def test_apply_updates_and_zero_grad() -> None:
     layer = DenseLayer(in_features=3, out_features=1)
     layer.grad_weights = np.full_like(layer.grad_weights, 0.1)
     layer.grad_bias = np.array([0.2])
-
-    class SGD:
-        def __init__(self, lr: float) -> None:
-            self.lr = lr
-
-        def update(self, param: np.ndarray, grad: np.ndarray) -> np.ndarray:
-            return param - self.lr * grad
 
     optimizer = SGD(lr=0.5)
     original_weights = layer.weights.copy()

@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from my_torch import DenseLayer, NeuralNetwork, mse_grad, mse_loss, relu, relu_derivative
+from .optimizers import SGD
 
 
 def test_network_keeps_batch_and_feature_shapes() -> None:
@@ -152,7 +153,7 @@ def test_zero_grad_clears_all_layer_gradients() -> None:
     assert np.all(second.grad_bias == 0)
 
 
-def test_toy_training_step_reduces_loss() -> None:
+def test_toy_training_reduces_loss() -> None:
     layer = DenseLayer(in_features=1, out_features=1)
     layer.weights = np.array([[0.5]])
     layer.bias = np.array([0.0])
@@ -160,13 +161,6 @@ def test_toy_training_step_reduces_loss() -> None:
 
     inputs = np.arange(4, dtype=float).reshape(-1, 1)
     targets = inputs.copy()
-
-    class SGD:
-        def __init__(self, lr: float) -> None:
-            self.lr = lr
-
-        def update(self, param: np.ndarray, grad: np.ndarray) -> np.ndarray:
-            return param - self.lr * grad
 
     optimizer = SGD(lr=0.1)
     initial_loss = mse_loss(network.forward(inputs), targets)
