@@ -3,7 +3,31 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from my_torch import DenseLayer, NeuralNetwork, relu, relu_derivative
+from my_torch import DenseLayer, NeuralNetwork, mse_grad, mse_loss, relu, relu_derivative
+
+
+def test_network_keeps_batch_and_feature_shapes() -> None:
+    rng = np.random.default_rng(7)
+    first = DenseLayer(
+        in_features=3,
+        out_features=5,
+        activation=relu,
+        activation_derivative=relu_derivative,
+        rng=rng,
+    )
+    second = DenseLayer(in_features=5, out_features=2, rng=rng)
+    network = NeuralNetwork([first, second])
+
+    inputs = rng.standard_normal(size=(6, 3))
+    outputs = network.forward(inputs)
+    assert outputs.shape == (6, 2)
+
+    grad_loss = rng.standard_normal(size=outputs.shape)
+    grad_input = network.backward(grad_loss)
+
+    assert grad_input.shape == inputs.shape
+    assert first.grad_weights.shape == (5, 3)
+    assert second.grad_weights.shape == (2, 5)
 
 
 def test_forward_and_backward_chain() -> None:
@@ -126,3 +150,35 @@ def test_zero_grad_clears_all_layer_gradients() -> None:
     assert np.all(first.grad_bias == 0)
     assert np.all(second.grad_weights == 0)
     assert np.all(second.grad_bias == 0)
+
+
+def test_toy_training_step_reduces_loss() -> None:
+    layer = DenseLayer(in_features=1, out_features=1)
+    layer.weights = np.array([[0.5]])
+    layer.bias = np.array([0.0])
+    network = NeuralNetwork([layer])
+
+    inputs = np.arange(4, dtype=float).reshape(-1, 1)
+    targets = inputs.copy()
+
+    class SGD:
+        def __init__(self, lr: float) -> None:
+            self.lr = lr
+
+        def update(self, param: np.ndarray, grad: np.ndarray) -> np.ndarray:
+            return param - self.lr * grad
+
+    optimizer = SGD(lr=0.1)
+    initial_loss = mse_loss(network.forward(inputs), targets)
+
+    for _ in range(25):
+        predictions = network.forward(inputs)
+        grad_loss = mse_grad(predictions, targets)
+        network.backward(grad_loss)
+        for layer in network.layers:
+            layer.apply_updates(optimizer)
+        network.zero_grad()
+
+    final_loss = mse_loss(network.forward(inputs), targets)
+    assert final_loss < initial_loss
+    assert final_loss < 0.05

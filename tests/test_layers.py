@@ -6,6 +6,22 @@ import pytest
 from my_torch import DenseLayer, relu, relu_derivative
 
 
+def test_dense_layer_preserves_shapes() -> None:
+    rng = np.random.default_rng(123)
+    batch_size, in_features, out_features = 5, 4, 3
+    layer = DenseLayer(in_features=in_features, out_features=out_features, rng=rng)
+
+    inputs = rng.standard_normal(size=(batch_size, in_features))
+    outputs = layer.forward(inputs)
+    assert outputs.shape == (batch_size, out_features)
+
+    grad_output = rng.standard_normal(size=outputs.shape)
+    grad_input = layer.backward(grad_output)
+    assert grad_input.shape == (batch_size, in_features)
+    assert layer.grad_weights.shape == (out_features, in_features)
+    assert layer.grad_bias.shape == (out_features,)
+
+
 def test_forward_computes_linear_activation() -> None:
     layer = DenseLayer(in_features=2, out_features=3)
     layer.weights = np.array([[1.0, 2.0], [3.0, -1.0], [0.5, 0.5]])
