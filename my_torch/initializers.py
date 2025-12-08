@@ -92,7 +92,16 @@ _INITIALIZER_REGISTRY: dict[str, InitializerFn] = {
 
 
 def get_initializer(mode: InitializerKey) -> InitializerFn:
-    """Return an initializer callable for the requested mode"""
+    """
+    Resolve a weight initializer by name
+
+    Args:
+        mode: Initialization strategy key such as "xavier", "he", or "uniform"
+    Returns:
+        Callable that generates an array for a given shape and optional RNG
+    Raises:
+        ValueError: when the mode is not registered
+    """
     key = mode.lower()
     try:
         return _INITIALIZER_REGISTRY[key]
@@ -104,7 +113,18 @@ def get_initializer(mode: InitializerKey) -> InitializerFn:
 def initialize_weights(
     shape: tuple[int, ...], *, mode: InitializerKey = "xavier", rng: np.random.Generator | None = None
 ) -> ArrayFloat:
-    """Initialize weights for the given shape using the selected strategy"""
+    """
+    Initialize weights for the given shape using a selected strategy
+
+    Args:
+        shape: Target tensor shape, e.g. (out_features, in_features)
+        mode: Initialization key, defaults to "xavier"
+        rng: Optional NumPy random number generator
+    Returns:
+        Array shaped like `shape` populated according to the initializer
+    Raises:
+        ValueError: when the mode is not a supported initializer
+    """
     initializer = get_initializer(mode)
     return initializer(shape, rng)
 
@@ -116,7 +136,19 @@ def initialize_bias(
     rng: np.random.Generator | None = None,
     value: float = 0.0,
 ) -> ArrayFloat:
-    """Initialize biases for the given shape using a simple policy"""
+    """
+    Initialize biases for the given shape using a specified policy
+
+    Args:
+        shape: Desired output shape for the bias array
+        mode: Policy name; one of "zeros", "normal", or "uniform"
+        rng: Optional NumPy random number generator for sampled modes
+        value: Fill value used when mode is "zeros"
+    Returns:
+        Array shaped like `shape` initialized with the selected policy
+    Raises:
+        ValueError: when mode is not one of the supported options
+    """
     if mode == "zeros":
         return np.full(shape, value, dtype=float)
     if mode == "normal":
