@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Callable, Protocol
+from typing import Callable, Literal, Protocol
 
 import numpy as np
 from numpy.typing import NDArray
@@ -31,6 +31,18 @@ class DenseLayer:
 
     Gradients are accumulated on backward passes and can be reset with `zero_grad`.
     Updates are delegated to any optimizer that implements an `update` method.
+
+    Args:
+        in_features: Number of input features (must be positive).
+        out_features: Number of output features (must be positive).
+        activation: Activation function to apply; defaults to identity.
+        activation_derivative: Derivative of the activation function. If None, uses ones.
+        weight_initializer: Key specifying the weight initialization strategy.
+        bias_initializer: Policy for bias initialization; one of "zeros", "normal", or "uniform".
+        rng: Optional random number generator for reproducibility.
+
+    Raises:
+        ValueError: If `in_features` or `out_features` are not positive.
     """
 
     in_features: int
@@ -38,7 +50,7 @@ class DenseLayer:
     activation: ActivationFn = _identity
     activation_derivative: ActivationDerivativeFn | None = None
     weight_initializer: InitializerKey = "xavier"
-    bias_initializer: str = "zeros"
+    bias_initializer: Literal["zeros", "normal", "uniform"] = "zeros"
     rng: np.random.Generator | None = None
 
     weights: ArrayFloat = field(init=False)

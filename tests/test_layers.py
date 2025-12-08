@@ -73,3 +73,35 @@ def test_backward_without_forward_raises() -> None:
     layer = DenseLayer(in_features=2, out_features=2)
     with pytest.raises(RuntimeError):
         layer.backward(np.ones((1, 2)))
+
+
+def test_forward_invalid_dimensions_raise() -> None:
+    layer = DenseLayer(in_features=2, out_features=2)
+    with pytest.raises(ValueError, match="2D array"):
+        layer.forward(np.array([1.0, 2.0, 3.0]))
+    with pytest.raises(ValueError, match="expected input feature dimension"):
+        layer.forward(np.ones((1, 3)))
+
+
+def test_backward_mismatched_grad_output_raises() -> None:
+    layer = DenseLayer(in_features=2, out_features=2)
+    layer.forward(np.ones((1, 2)))
+    with pytest.raises(ValueError, match="grad_output shape"):
+        layer.backward(np.ones((2, 2)))
+
+
+def test_invalid_feature_dimensions_raise_in_post_init() -> None:
+    with pytest.raises(ValueError, match="must be positive"):
+        DenseLayer(in_features=0, out_features=1)
+    with pytest.raises(ValueError, match="must be positive"):
+        DenseLayer(in_features=1, out_features=-2)
+
+
+def test_parameters_and_gradients_return_expected_references() -> None:
+    layer = DenseLayer(in_features=2, out_features=2)
+    params = layer.parameters()
+    grads = layer.gradients()
+    assert params[0] is layer.weights
+    assert params[1] is layer.bias
+    assert grads[0] is layer.grad_weights
+    assert grads[1] is layer.grad_bias
