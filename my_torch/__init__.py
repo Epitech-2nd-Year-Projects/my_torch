@@ -16,6 +16,7 @@ from .initializers import (
     initialize_weights,
 )
 from .layers import DenseLayer
+from .training import EpochMetrics, TrainingHistory, train
 from .optimizers import SGD
 from .neural_network import NeuralNetwork
 from .losses import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
@@ -36,6 +37,9 @@ __all__ = [
     "get_initializer",
     "initialize_weights",
     "initialize_bias",
+    "EpochMetrics",
+    "TrainingHistory",
+    "train",
     "DenseLayer",
     "SGD",
     "NeuralNetwork",
