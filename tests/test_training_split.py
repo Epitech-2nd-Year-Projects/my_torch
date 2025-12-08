@@ -47,10 +47,15 @@ def test_train_validation_split_validates_ratios() -> None:
         train_validation_split(inputs, labels, val_ratio=0.0)
 
     with pytest.raises(ValueError):
-        train_validation_split(inputs, labels, val_ratio=0.01)
+        train_validation_split(inputs, labels, val_ratio=1.0)
+
+
+def test_train_validation_split_rejects_empty_split_from_tiny_ratio() -> None:
+    inputs = np.arange(100, dtype=float).reshape(100, 1)
+    labels = np.arange(100, dtype=int)
 
     with pytest.raises(ValueError):
-        train_validation_split(inputs, labels, val_ratio=1.0)
+        train_validation_split(inputs, labels, val_ratio=0.001)
 
 
 def test_train_validation_split_rejects_seed_and_rng_combo() -> None:
