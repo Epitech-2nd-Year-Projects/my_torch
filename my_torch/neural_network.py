@@ -1,18 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Iterable, Mapping, MutableSequence, Protocol, Sequence
+from typing import Iterable, Mapping, Protocol, Sequence
 
-import numpy as np
-from numpy.typing import NDArray
-
-from .layers import (
-    ActivationDerivativeFn,
-    ActivationFn,
-    DenseLayer,
-)
-
-ArrayFloat = NDArray[np.floating]
+from .layers import ArrayFloat, ActivationDerivativeFn, ActivationFn, DenseLayer
 
 LayerConfig = Mapping[str, object]
 
@@ -31,17 +21,16 @@ class TrainableLayer(Protocol):
     def backward(self, grad_output: ArrayFloat) -> ArrayFloat:
         ...
 
-    def parameters(self) -> Sequence[ArrayFloat]:
+    def parameters(self) -> tuple[ArrayFloat, ...]:
         ...
 
-    def gradients(self) -> Sequence[ArrayFloat]:
+    def gradients(self) -> tuple[ArrayFloat, ...]:
         ...
 
     def zero_grad(self) -> None:
         ...
 
 
-@dataclass
 class NeuralNetwork:
     """
     Simple feedforward neural network composed of ordered layers.
@@ -49,9 +38,16 @@ class NeuralNetwork:
     Layers can be supplied directly or constructed from a configuration list
     containing dictionaries with a ``type`` key (currently only ``dense``) and
     the arguments needed to instantiate each layer.
+
+    Raises:
+        ValueError: If both `layers` and `layer_configs` are provided, if an
+            unsupported layer type is specified, if required config keys are
+            missing, or if unexpected config keys are present.
+        TypeError: If activation or activation_derivative in config are not
+            callable.
     """
 
-    layers: MutableSequence[TrainableLayer]
+    layers: list[TrainableLayer]
 
     def __init__(self, layers: Iterable[TrainableLayer] | None = None, *, layer_configs: Sequence[LayerConfig] | None = None) -> None:
         if layers is not None and layer_configs is not None:
@@ -99,7 +95,7 @@ class NeuralNetwork:
             in_features = int(config["in_features"])  # type: ignore[index]
             out_features = int(config["out_features"])  # type: ignore[index]
         except KeyError as exc:
-            raise ValueError("dense layer config requires 'in_features' and 'out_features'") from exc
+            raise ValueError("dense layer config requires 'in_features' and 'out_features' keys") from exc
 
         allowed_keys = {
             "in_features",

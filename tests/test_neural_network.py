@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from my_torch import DenseLayer, NeuralNetwork, relu, relu_derivative
 
@@ -80,3 +81,48 @@ def test_configuration_constructor_builds_layers() -> None:
     sample = np.ones((1, 4))
     output = network.forward(sample)
     assert output.shape == (1, 1)
+
+
+def test_init_with_both_layers_and_configs_raises() -> None:
+    layer = DenseLayer(in_features=2, out_features=1)
+    configs = [{"in_features": 2, "out_features": 1}]
+    with pytest.raises(ValueError, match="either layers or layer_configs"):
+        NeuralNetwork([layer], layer_configs=configs)
+
+
+def test_config_with_unsupported_layer_type_raises() -> None:
+    with pytest.raises(ValueError, match="unsupported layer type"):
+        NeuralNetwork(layer_configs=[{"type": "conv", "in_features": 2, "out_features": 1}])
+
+
+def test_config_missing_required_keys_raises() -> None:
+    with pytest.raises(ValueError, match="requires 'in_features' and 'out_features' keys"):
+        NeuralNetwork(layer_configs=[{"type": "dense"}])
+
+
+def test_config_with_unexpected_keys_raises() -> None:
+    with pytest.raises(ValueError, match="unexpected keys"):
+        NeuralNetwork(layer_configs=[{"in_features": 2, "out_features": 1, "invalid_key": 123}])
+
+
+def test_config_with_non_callable_activation_raises() -> None:
+    with pytest.raises(TypeError, match="must be callable"):
+        NeuralNetwork(layer_configs=[{"in_features": 2, "out_features": 1, "activation": "not_callable"}])
+
+
+def test_zero_grad_clears_all_layer_gradients() -> None:
+    first = DenseLayer(in_features=2, out_features=2)
+    second = DenseLayer(in_features=2, out_features=1)
+    network = NeuralNetwork([first, second])
+
+    first.grad_weights = np.full_like(first.grad_weights, 0.5)
+    first.grad_bias = np.full_like(first.grad_bias, 0.3)
+    second.grad_weights = np.full_like(second.grad_weights, -0.2)
+    second.grad_bias = np.full_like(second.grad_bias, -0.1)
+
+    network.zero_grad()
+
+    assert np.all(first.grad_weights == 0)
+    assert np.all(first.grad_bias == 0)
+    assert np.all(second.grad_weights == 0)
+    assert np.all(second.grad_bias == 0)
