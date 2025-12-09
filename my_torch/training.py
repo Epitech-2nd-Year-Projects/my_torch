@@ -198,7 +198,8 @@ def train(
         shuffle: Whether to shuffle training data each epoch
         rng: Optional random generator for deterministic shuffling
         accuracy_fn: Optional accuracy metric; defaults to argmax-based accuracy
-        weight_decay: L2 regularization strength. If > 0, adds L2 loss to reported metrics.
+        weight_decay: L2 regularization strength. If > 0,
+                      adds L2 loss to reported metrics.
                       Optimizers supporting weight decay should be configured with it
                       directly during their instantiation.
     Returns:
