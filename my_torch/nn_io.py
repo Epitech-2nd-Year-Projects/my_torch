@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -86,7 +86,7 @@ def save_nn(
 
     path = Path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, **dict(arrays))
+    np.savez(path, **cast(dict[str, Any], dict(arrays)))
 
 
 def load_nn(
