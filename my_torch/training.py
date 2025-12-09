@@ -129,6 +129,22 @@ def _classification_accuracy(logits: ArrayFloat, labels: ArrayInt) -> float:
     return float(np.mean(predictions == labels))
 
 
+def _compute_l2_loss(network: NeuralNetwork, weight_decay: float) -> float:
+    """
+    Compute L2 regularization loss for all network parameters.
+
+    Args:
+        network: NeuralNetwork whose parameters will be regularized.
+        weight_decay: Regularization strength (lambda).
+    Returns:
+        Total L2 loss (scalar). Returns 0.0 if weight_decay <= 0.
+    """
+    if weight_decay <= 0.0:
+        return 0.0
+    l2_sum = sum(float(np.sum(np.square(p))) for p in network.parameters())
+    return 0.5 * weight_decay * l2_sum
+
+
 def _evaluate(
     network: NeuralNetwork,
     inputs: ArrayFloat,
@@ -136,15 +152,20 @@ def _evaluate(
     batch_size: int,
     loss_fn: LossFn,
     accuracy_fn: AccuracyFn,
+    weight_decay: float = 0.0,
 ) -> EpochMetrics:
     total_loss = 0.0
     weighted_accuracy = 0.0
     total_samples = inputs.shape[0]
+
+    reg_loss = _compute_l2_loss(network, weight_decay)
+
     for batch_inputs, batch_labels in _iter_batches(inputs, labels, batch_size):
         logits = network.forward(batch_inputs)
         batch_size_actual = batch_labels.shape[0]
-        total_loss += loss_fn(logits, batch_labels) * batch_size_actual
+        total_loss += (loss_fn(logits, batch_labels) + reg_loss) * batch_size_actual
         weighted_accuracy += accuracy_fn(logits, batch_labels) * batch_size_actual
+
     if total_samples == 0:
         return EpochMetrics(loss=0.0, accuracy=0.0)
     return EpochMetrics(
@@ -167,6 +188,7 @@ def train(
     shuffle: bool = True,
     rng: np.random.Generator | None = None,
     accuracy_fn: AccuracyFn | None = None,
+    weight_decay: float = 0.0,
 ) -> TrainingHistory:
     """
     Train a network with mini-batch updates and return per-epoch metrics
@@ -185,6 +207,10 @@ def train(
         shuffle: Whether to shuffle training data each epoch
         rng: Optional random generator for deterministic shuffling
         accuracy_fn: Optional accuracy metric; defaults to argmax-based accuracy
+        weight_decay: L2 regularization strength. If > 0,
+                      adds L2 loss to reported metrics.
+                      Optimizers supporting weight decay should be configured with it
+                      directly during their instantiation.
     Returns:
         TrainingHistory containing train and validation metrics per epoch
     Raises:
@@ -195,6 +221,8 @@ def train(
         raise ValueError("epochs must be positive")
     if batch_size <= 0:
         raise ValueError("batch_size must be positive")
+    if weight_decay < 0:
+        raise ValueError("weight_decay must be non-negative")
 
     train_inputs_array, train_labels_array = _validate_inputs(
         train_inputs, train_labels
@@ -220,11 +248,14 @@ def train(
         epoch_accuracy = 0.0
         seen = 0
 
+        reg_loss = _compute_l2_loss(network, weight_decay)
+
         for batch_inputs, batch_labels in _iter_batches(
             epoch_inputs, epoch_labels, batch_size
         ):
             logits = network.forward(batch_inputs)
             batch_loss = loss_fn(logits, batch_labels)
+
             grad_logits = loss_grad_fn(logits, batch_labels)
 
             network.zero_grad()
@@ -232,7 +263,8 @@ def train(
             optimizer.step(network.parameters(), network.gradients())
 
             batch_size_actual = batch_labels.shape[0]
-            epoch_loss += batch_loss * batch_size_actual
+
+            epoch_loss += (batch_loss + reg_loss) * batch_size_actual
             epoch_accuracy += metric(logits, batch_labels) * batch_size_actual
             seen += batch_size_actual
 
