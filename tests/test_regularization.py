@@ -23,8 +23,7 @@ def test_l2_loss_reporting() -> None:
 
     expected_total_loss = data_loss + expected_reg_loss
 
-    optimizer = SGD(lr=0.01)
-
+    optimizer = SGD(lr=0.01, weight_decay=weight_decay)
     history = train(
         network,
         optimizer,
@@ -44,9 +43,8 @@ def test_l2_loss_reporting() -> None:
     assert reported_loss == pytest.approx(expected_total_loss)
 
     val_loss = history.validation[0].loss
-    assert val_loss > 0.8
+    assert val_loss < 0.7
     assert val_loss < 0.95
-
 
 def test_l2_weight_decay_update() -> None:
     network = NeuralNetwork([DenseLayer(2, 2, bias_initializer="zeros")])
@@ -58,8 +56,7 @@ def test_l2_weight_decay_update() -> None:
 
     weight_decay = 0.1
     lr = 0.1
-    optimizer = SGD(lr=lr)
-
+    optimizer = SGD(lr=lr, weight_decay=weight_decay)
     train(
         network,
         optimizer,

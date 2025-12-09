@@ -198,8 +198,9 @@ def train(
         shuffle: Whether to shuffle training data each epoch
         rng: Optional random generator for deterministic shuffling
         accuracy_fn: Optional accuracy metric; defaults to argmax-based accuracy
-        weight_decay: L2 regularization strength. If > 0, adds L2 loss to reported metrics
-                      and attempts to set `weight_decay` on the optimizer.
+        weight_decay: L2 regularization strength. If > 0, adds L2 loss to reported metrics.
+                      Optimizers supporting weight decay should be configured with it
+                      directly during their instantiation.
     Returns:
         TrainingHistory containing train and validation metrics per epoch
     Raises:
@@ -220,9 +221,6 @@ def train(
     metric = accuracy_fn or _classification_accuracy
     rng_instance = _resolve_rng(rng)
     num_train = train_inputs_array.shape[0]
-
-    if weight_decay > 0.0 and hasattr(optimizer, "weight_decay"):
-        setattr(optimizer, "weight_decay", weight_decay)
 
     train_history: list[EpochMetrics] = []
     val_history: list[EpochMetrics] = []
