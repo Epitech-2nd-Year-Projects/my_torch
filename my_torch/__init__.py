@@ -10,11 +10,14 @@ from .activations import (
     tanh,
     tanh_derivative,
 )
-from .initializers import (
-    get_initializer,
-    initialize_bias,
-    initialize_weights,
+from .hyperparameter_search import (
+    HyperparameterConfig,
+    HyperparameterSearchSummary,
+    HyperparameterTrial,
+    format_search_summary,
+    search_hyperparameters,
 )
+from .initializers import get_initializer, initialize_bias, initialize_weights
 from .layers import DenseLayer
 from .losses import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
 from .neural_network import NeuralNetwork
@@ -37,6 +40,11 @@ __all__ = [
     "get_initializer",
     "initialize_weights",
     "initialize_bias",
+    "HyperparameterConfig",
+    "HyperparameterTrial",
+    "HyperparameterSearchSummary",
+    "search_hyperparameters",
+    "format_search_summary",
     "EpochMetrics",
     "TrainingHistory",
     "train_validation_split",
