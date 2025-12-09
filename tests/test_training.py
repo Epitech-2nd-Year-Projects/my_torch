@@ -94,3 +94,80 @@ def test_train_returns_metrics_for_train_and_validation() -> None:
     assert history.validation[0].loss == pytest.approx(expected_loss)
     assert history.train[0].accuracy == pytest.approx(1.0)
     assert history.validation[0].accuracy == pytest.approx(1.0)
+
+
+def test_train_stops_early_when_patience_is_reached() -> None:
+    inputs = np.array([[1.0, 0.0], [0.0, 1.0]])
+    labels = np.array([0, 1], dtype=int)
+    network = NeuralNetwork([DenseLayer(2, 2)])
+
+    class NoOpOptimizer:
+        def step(self, parameters, gradients) -> None:
+            return None
+
+    history = train(
+        network,
+        NoOpOptimizer(),
+        inputs,
+        labels,
+        val_inputs=inputs,
+        val_labels=labels,
+        loss_fn=cross_entropy_loss,
+        loss_grad_fn=cross_entropy_grad,
+        epochs=5,
+        batch_size=2,
+        shuffle=False,
+        early_stopping_patience=1,
+    )
+
+    assert len(history.train) == 2
+    assert len(history.validation) == 2
+    assert history.best_epoch == 0
+    assert history.best_parameters is not None
+
+
+def test_train_tracks_best_model_parameters() -> None:
+    inputs = np.array([[1.0, 0.0], [0.0, 1.0]])
+    labels = np.array([0, 1], dtype=int)
+    network = NeuralNetwork([DenseLayer(2, 2)])
+    layer = cast(DenseLayer, network.layers[0])
+    layer.weights.fill(0.0)
+    layer.bias.fill(0.0)
+
+    desired_weights = np.array([[3.0, -1.0], [-1.0, 3.0]])
+    desired_bias = np.array([0.0, 0.0])
+
+    class ToggleOptimizer:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def step(self, parameters, gradients) -> None:
+            self.calls += 1
+            weights, bias = parameters
+            if self.calls == 1:
+                weights[...] = desired_weights
+                bias[...] = desired_bias
+            else:
+                weights.fill(0.0)
+                bias.fill(0.0)
+
+    history = train(
+        network,
+        ToggleOptimizer(),
+        inputs,
+        labels,
+        val_inputs=inputs,
+        val_labels=labels,
+        loss_fn=cross_entropy_loss,
+        loss_grad_fn=cross_entropy_grad,
+        epochs=3,
+        batch_size=2,
+        shuffle=False,
+    )
+
+    assert history.best_epoch == 0
+    assert history.best_parameters is not None
+    best_weights, best_bias = history.best_parameters
+    assert np.allclose(best_weights, desired_weights)
+    assert np.allclose(best_bias, desired_bias)
+    assert not np.allclose(layer.weights, desired_weights)
