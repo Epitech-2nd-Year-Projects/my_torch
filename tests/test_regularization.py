@@ -1,9 +1,10 @@
 import numpy as np
 import pytest
+
 from my_torch.layers import DenseLayer
+from my_torch.losses import cross_entropy_grad, cross_entropy_loss
 from my_torch.neural_network import NeuralNetwork
 from my_torch.optimizers import SGD
-from my_torch.losses import cross_entropy_loss, cross_entropy_grad
 from my_torch.training import train
 
 
@@ -45,6 +46,7 @@ def test_l2_loss_reporting() -> None:
     val_loss = history.validation[0].loss
     assert val_loss < 0.7
     assert val_loss < 0.95
+
 
 def test_l2_weight_decay_update() -> None:
     network = NeuralNetwork([DenseLayer(2, 2, bias_initializer="zeros")])

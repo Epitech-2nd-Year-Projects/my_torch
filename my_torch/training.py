@@ -130,6 +130,15 @@ def _classification_accuracy(logits: ArrayFloat, labels: ArrayInt) -> float:
 
 
 def _compute_l2_loss(network: NeuralNetwork, weight_decay: float) -> float:
+    """
+    Compute L2 regularization loss for all network parameters.
+
+    Args:
+        network: NeuralNetwork whose parameters will be regularized.
+        weight_decay: Regularization strength (lambda).
+    Returns:
+        Total L2 loss (scalar). Returns 0.0 if weight_decay <= 0.
+    """
     if weight_decay <= 0.0:
         return 0.0
     l2_sum = sum(float(np.sum(np.square(p))) for p in network.parameters())
