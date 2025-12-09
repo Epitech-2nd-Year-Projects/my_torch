@@ -86,7 +86,8 @@ def save_nn(
 
     path = Path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, **cast(dict[str, Any], dict(arrays)))
+    with path.open("wb") as file_obj:
+        np.savez(file_obj, **cast(dict[str, Any], dict(arrays)))
 
 
 def load_nn(
@@ -123,7 +124,7 @@ def load_nn(
     if activation_derivative_registry is not None:
         derivative_lookup.update(activation_derivative_registry)
 
-    with np.load(path, allow_pickle=False) as archive:
+    with path.open("rb") as file_obj, np.load(file_obj, allow_pickle=False) as archive:
         try:
             metadata_raw = archive[_METADATA_KEY]
         except KeyError as exc:
