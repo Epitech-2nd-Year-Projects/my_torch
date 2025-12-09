@@ -21,6 +21,11 @@ from .initializers import get_initializer, initialize_bias, initialize_weights
 from .layers import DenseLayer
 from .losses import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
 from .neural_network import NeuralNetwork
+from .nn_io import (
+    SerializedModelMetadata,
+    load_nn,
+    save_nn,
+)
 from .optimizers import SGD
 from .training import EpochMetrics, TrainingHistory, train, train_validation_split
 
@@ -52,4 +57,7 @@ __all__ = [
     "DenseLayer",
     "SGD",
     "NeuralNetwork",
+    "save_nn",
+    "load_nn",
+    "SerializedModelMetadata",
 ]
