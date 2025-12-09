@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 
 from . import activations as activation_module
 from .layers import DenseLayer
-from .neural_network import NeuralNetwork
+from .neural_network import NeuralNetwork, TrainableLayer
 
 ArrayFloat = NDArray[np.floating]
 ActivationRegistry = Mapping[str, Callable[..., ArrayFloat]]
@@ -79,14 +79,14 @@ def save_nn(
     if extra_metadata is not None:
         payload["extras"] = dict(extra_metadata)
 
-    arrays: MutableMapping[str, ArrayFloat] = _serialize_parameters(network)
+    arrays = _serialize_parameters(network)
     arrays[_METADATA_KEY] = np.array(
         json.dumps(payload, default=_json_default_serializer), dtype=np.dtype("U")
     )
 
     path = Path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, **arrays)
+    np.savez(path, **dict(arrays))
 
 
 def load_nn(
@@ -169,28 +169,31 @@ def load_nn(
     return network, metadata_obj
 
 
-def _serialize_parameters(network: NeuralNetwork) -> MutableMapping[str, ArrayFloat]:
-    arrays: dict[str, ArrayFloat] = {}
+def _serialize_parameters(network: NeuralNetwork) -> dict[str, np.ndarray]:
+    arrays: dict[str, np.ndarray] = {}
     for idx, layer in enumerate(network.layers):
-        if not isinstance(layer, DenseLayer):
-            raise TypeError("only DenseLayer serialization is supported")
-        arrays[f"layer_{idx}_weights"] = np.asarray(layer.weights, dtype=float)
-        arrays[f"layer_{idx}_bias"] = np.asarray(layer.bias, dtype=float)
+        dense = _require_dense_layer(layer)
+        arrays[f"layer_{idx}_weights"] = np.asarray(dense.weights, dtype=float)
+        arrays[f"layer_{idx}_bias"] = np.asarray(dense.bias, dtype=float)
     return arrays
 
 
 def _serialize_architecture(network: NeuralNetwork) -> dict[str, Any]:
     return {
         "layers": [
-            _serialize_dense_layer(layer, idx)
+            _serialize_dense_layer(_require_dense_layer(layer), idx)
             for idx, layer in enumerate(network.layers)
         ]
     }
 
 
+def _require_dense_layer(layer: TrainableLayer) -> DenseLayer:
+    if isinstance(layer, DenseLayer):
+        return layer
+    raise TypeError("only DenseLayer instances can be serialized")
+
+
 def _serialize_dense_layer(layer: DenseLayer, idx: int) -> dict[str, Any]:
-    if not isinstance(layer, DenseLayer):
-        raise TypeError("only DenseLayer instances can be serialized")
     activation_name = _callable_to_name(layer.activation, allow_identity=True)
     derivative_name = _callable_to_name(layer.activation_derivative)
     if activation_name == "_identity":
