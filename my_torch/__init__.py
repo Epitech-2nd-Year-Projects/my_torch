@@ -16,10 +16,10 @@ from .initializers import (
     initialize_weights,
 )
 from .layers import DenseLayer
-from .training import EpochMetrics, TrainingHistory, train, train_validation_split
-from .optimizers import SGD
-from .neural_network import NeuralNetwork
 from .losses import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
+from .neural_network import NeuralNetwork
+from .optimizers import SGD
+from .training import EpochMetrics, TrainingHistory, train, train_validation_split
 
 __all__ = [
     "relu",

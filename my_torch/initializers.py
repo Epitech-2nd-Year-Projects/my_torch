@@ -47,36 +47,50 @@ def _resolve_rng(rng: np.random.Generator | None) -> np.random.Generator:
     return rng if rng is not None else np.random.default_rng()
 
 
-def _xavier_uniform(shape: tuple[int, ...], rng: np.random.Generator | None = None) -> ArrayFloat:
+def _xavier_uniform(
+    shape: tuple[int, ...], rng: np.random.Generator | None = None
+) -> ArrayFloat:
     fan_in, fan_out = _fan_in_out(shape)
     limit = np.sqrt(6.0 / (fan_in + fan_out))
     return _resolve_rng(rng).uniform(-limit, limit, size=shape)
 
 
-def _xavier_normal(shape: tuple[int, ...], rng: np.random.Generator | None = None) -> ArrayFloat:
+def _xavier_normal(
+    shape: tuple[int, ...], rng: np.random.Generator | None = None
+) -> ArrayFloat:
     fan_in, fan_out = _fan_in_out(shape)
     std = np.sqrt(2.0 / (fan_in + fan_out))
     return _resolve_rng(rng).normal(0.0, std, size=shape)
 
 
-def _he_uniform(shape: tuple[int, ...], rng: np.random.Generator | None = None) -> ArrayFloat:
+def _he_uniform(
+    shape: tuple[int, ...], rng: np.random.Generator | None = None
+) -> ArrayFloat:
     fan_in, _ = _fan_in_out(shape)
     limit = np.sqrt(6.0 / fan_in)
     return _resolve_rng(rng).uniform(-limit, limit, size=shape)
 
 
-def _he_normal(shape: tuple[int, ...], rng: np.random.Generator | None = None) -> ArrayFloat:
+def _he_normal(
+    shape: tuple[int, ...], rng: np.random.Generator | None = None
+) -> ArrayFloat:
     fan_in, _ = _fan_in_out(shape)
     std = np.sqrt(2.0 / fan_in)
     return _resolve_rng(rng).normal(0.0, std, size=shape)
 
 
-def _simple_normal(shape: tuple[int, ...], rng: np.random.Generator | None = None) -> ArrayFloat:
+def _simple_normal(
+    shape: tuple[int, ...], rng: np.random.Generator | None = None
+) -> ArrayFloat:
     return _resolve_rng(rng).normal(0.0, _DEFAULT_STDDEV, size=shape)
 
 
-def _simple_uniform(shape: tuple[int, ...], rng: np.random.Generator | None = None) -> ArrayFloat:
-    return _resolve_rng(rng).uniform(-_DEFAULT_UNIFORM_LIMIT, _DEFAULT_UNIFORM_LIMIT, size=shape)
+def _simple_uniform(
+    shape: tuple[int, ...], rng: np.random.Generator | None = None
+) -> ArrayFloat:
+    return _resolve_rng(rng).uniform(
+        -_DEFAULT_UNIFORM_LIMIT, _DEFAULT_UNIFORM_LIMIT, size=shape
+    )
 
 
 _INITIALIZER_REGISTRY: dict[str, InitializerFn] = {
@@ -107,11 +121,16 @@ def get_initializer(mode: InitializerKey) -> InitializerFn:
         return _INITIALIZER_REGISTRY[key]
     except KeyError as exc:
         available = ", ".join(sorted(_INITIALIZER_REGISTRY))
-        raise ValueError(f"unknown initialization strategy '{mode}', choose from: {available}") from exc
+        raise ValueError(
+            f"unknown initialization strategy '{mode}', choose from: {available}"
+        ) from exc
 
 
 def initialize_weights(
-    shape: tuple[int, ...], *, mode: InitializerKey = "xavier", rng: np.random.Generator | None = None
+    shape: tuple[int, ...],
+    *,
+    mode: InitializerKey = "xavier",
+    rng: np.random.Generator | None = None,
 ) -> ArrayFloat:
     """
     Initialize weights for the given shape using a selected strategy

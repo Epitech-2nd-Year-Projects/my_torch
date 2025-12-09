@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pytest
 
 from my_torch.layers import DenseLayer
 from my_torch.losses import cross_entropy_grad, cross_entropy_loss
 from my_torch.neural_network import NeuralNetwork
-from my_torch.training import EpochMetrics, TrainingHistory, _classification_accuracy, _validate_inputs, train
+from my_torch.training import (
+    TrainingHistory,
+    _classification_accuracy,
+    _validate_inputs,
+    train,
+)
 
 
 def test_validate_inputs_accepts_matching_shapes() -> None:
@@ -56,8 +63,9 @@ def test_train_returns_metrics_for_train_and_validation() -> None:
     inputs = np.array([[1.0, 0.0], [0.0, 1.0]])
     labels = np.array([0, 1], dtype=int)
     network = NeuralNetwork([DenseLayer(2, 2)])
-    network.layers[0].weights[...] = np.array([[1.0, 0.0], [0.0, 1.0]])
-    network.layers[0].bias.fill(0.0)
+    layer = cast(DenseLayer, network.layers[0])
+    layer.weights[...] = np.array([[1.0, 0.0], [0.0, 1.0]])
+    layer.bias.fill(0.0)
 
     class NoOpOptimizer:
         def step(self, parameters, gradients) -> None:

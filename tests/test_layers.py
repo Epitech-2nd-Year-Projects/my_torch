@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from my_torch import DenseLayer, SGD, relu, relu_derivative
+from my_torch import SGD, DenseLayer, relu, relu_derivative
 
 
 def test_dense_layer_preserves_shapes() -> None:
@@ -36,7 +36,12 @@ def test_forward_computes_linear_activation() -> None:
 
 
 def test_backward_returns_gradients_matching_manual_derivation() -> None:
-    layer = DenseLayer(in_features=2, out_features=2, activation=relu, activation_derivative=relu_derivative)
+    layer = DenseLayer(
+        in_features=2,
+        out_features=2,
+        activation=relu,
+        activation_derivative=relu_derivative,
+    )
     layer.weights = np.array([[1.0, -2.0], [0.5, 1.5]])
     layer.bias = np.array([0.0, 0.5])
 

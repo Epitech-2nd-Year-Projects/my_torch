@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable, Mapping, Protocol, Sequence
 
-from .layers import ArrayFloat, ActivationDerivativeFn, ActivationFn, DenseLayer
+from .layers import ActivationDerivativeFn, ActivationFn, ArrayFloat, DenseLayer
 
 LayerConfig = Mapping[str, object]
 
@@ -15,20 +15,15 @@ class TrainableLayer(Protocol):
     access to its parameters and accumulated gradients.
     """
 
-    def forward(self, inputs: ArrayFloat) -> ArrayFloat:
-        ...
+    def forward(self, inputs: ArrayFloat) -> ArrayFloat: ...
 
-    def backward(self, grad_output: ArrayFloat) -> ArrayFloat:
-        ...
+    def backward(self, grad_output: ArrayFloat) -> ArrayFloat: ...
 
-    def parameters(self) -> tuple[ArrayFloat, ...]:
-        ...
+    def parameters(self) -> tuple[ArrayFloat, ...]: ...
 
-    def gradients(self) -> tuple[ArrayFloat, ...]:
-        ...
+    def gradients(self) -> tuple[ArrayFloat, ...]: ...
 
-    def zero_grad(self) -> None:
-        ...
+    def zero_grad(self) -> None: ...
 
 
 class NeuralNetwork:
@@ -49,7 +44,12 @@ class NeuralNetwork:
 
     layers: list[TrainableLayer]
 
-    def __init__(self, layers: Iterable[TrainableLayer] | None = None, *, layer_configs: Sequence[LayerConfig] | None = None) -> None:
+    def __init__(
+        self,
+        layers: Iterable[TrainableLayer] | None = None,
+        *,
+        layer_configs: Sequence[LayerConfig] | None = None,
+    ) -> None:
         if layers is not None and layer_configs is not None:
             raise ValueError("provide either layers or layer_configs, not both")
         if layer_configs is not None:
@@ -92,10 +92,12 @@ class NeuralNetwork:
 
     def _build_dense_layer(self, config: LayerConfig) -> DenseLayer:
         try:
-            in_features = int(config["in_features"])  # type: ignore[index]
-            out_features = int(config["out_features"])  # type: ignore[index]
+            in_features = int(config["in_features"])  # type: ignore[index, call-overload]
+            out_features = int(config["out_features"])  # type: ignore[index, call-overload]
         except KeyError as exc:
-            raise ValueError("dense layer config requires 'in_features' and 'out_features' keys") from exc
+            raise ValueError(
+                "dense layer config requires 'in_features' and 'out_features' keys"
+            ) from exc
 
         allowed_keys = {
             "in_features",
@@ -130,7 +132,9 @@ class NeuralNetwork:
         return DenseLayer(**dense_kwargs)  # type: ignore[arg-type]
 
     @staticmethod
-    def _expect_callable(name: str, candidate: object) -> ActivationFn | ActivationDerivativeFn:
+    def _expect_callable(
+        name: str, candidate: object
+    ) -> ActivationFn | ActivationDerivativeFn:
         if not callable(candidate):
             raise TypeError(f"{name} must be callable when provided")
         return candidate  # type: ignore[return-value]

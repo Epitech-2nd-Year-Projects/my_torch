@@ -72,7 +72,8 @@ def train_validation_split(
     Args:
         inputs: Feature array shaped (num_samples, num_features)
         labels: Integer class labels shaped (num_samples,)
-        val_ratio: Fraction of data to place in the validation set, must be between 0 and 1 (exclusive)
+        val_ratio: Fraction of data to place in the validation set, must be between 0
+            and 1 (exclusive)
         shuffle: Whether to shuffle before splitting
         seed: Optional seed used when constructing the RNG
         rng: Optional NumPy Generator; cannot be combined with seed
@@ -267,13 +268,7 @@ def train(
             )
         val_history.append(
             _evaluate(
-                network,
-                val_inputs_array,
-                val_labels_array,
-                batch_size,
-                loss_fn,
-                metric,
-                weight_decay=weight_decay,
+                network, val_inputs_array, val_labels_array, batch_size, loss_fn, metric
             )
         )
 
