@@ -19,7 +19,7 @@ class DummyNetwork:
         self.num_classes = num_classes
         self.param = np.zeros(1, dtype=float)
         self.grad = np.zeros_like(self.param)
-        self._last_input_shape: tuple[int, int] | None = None
+        self._last_input_shape: tuple[int, ...] | None = None
 
     def forward(self, inputs: np.ndarray) -> np.ndarray:
         inputs_array = np.asarray(inputs, dtype=float)
