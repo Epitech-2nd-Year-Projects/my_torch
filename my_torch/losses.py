@@ -14,7 +14,9 @@ __all__ = [
 ]
 
 
-def _validate_class_targets(logits: ArrayFloat, target: ArrayInt) -> tuple[ArrayFloat, ArrayInt]:
+def _validate_class_targets(
+    logits: ArrayFloat, target: ArrayInt
+) -> tuple[ArrayFloat, ArrayInt]:
     logits_array = np.asarray(logits, dtype=float)
     target_array = np.asarray(target)
     if logits_array.ndim != 2:

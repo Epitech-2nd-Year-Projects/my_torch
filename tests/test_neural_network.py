@@ -1,9 +1,19 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 import numpy as np
 import pytest
 
-from my_torch import DenseLayer, NeuralNetwork, SGD, mse_grad, mse_loss, relu, relu_derivative
+from my_torch import (
+    SGD,
+    DenseLayer,
+    NeuralNetwork,
+    mse_grad,
+    mse_loss,
+    relu,
+    relu_derivative,
+)
 
 
 def test_network_keeps_batch_and_feature_shapes() -> None:
@@ -86,7 +96,7 @@ def test_parameters_and_gradients_iterate_in_order() -> None:
 
 
 def test_configuration_constructor_builds_layers() -> None:
-    configs = [
+    configs: list[dict[str, Any]] = [
         {
             "type": "dense",
             "in_features": 4,
@@ -109,29 +119,39 @@ def test_configuration_constructor_builds_layers() -> None:
 
 def test_init_with_both_layers_and_configs_raises() -> None:
     layer = DenseLayer(in_features=2, out_features=1)
-    configs = [{"in_features": 2, "out_features": 1}]
+    configs: list[dict[str, Any]] = [{"in_features": 2, "out_features": 1}]
     with pytest.raises(ValueError, match="either layers or layer_configs"):
         NeuralNetwork([layer], layer_configs=configs)
 
 
 def test_config_with_unsupported_layer_type_raises() -> None:
     with pytest.raises(ValueError, match="unsupported layer type"):
-        NeuralNetwork(layer_configs=[{"type": "conv", "in_features": 2, "out_features": 1}])
+        NeuralNetwork(
+            layer_configs=[{"type": "conv", "in_features": 2, "out_features": 1}]
+        )
 
 
 def test_config_missing_required_keys_raises() -> None:
-    with pytest.raises(ValueError, match="requires 'in_features' and 'out_features' keys"):
+    with pytest.raises(
+        ValueError, match="requires 'in_features' and 'out_features' keys"
+    ):
         NeuralNetwork(layer_configs=[{"type": "dense"}])
 
 
 def test_config_with_unexpected_keys_raises() -> None:
     with pytest.raises(ValueError, match="unexpected keys"):
-        NeuralNetwork(layer_configs=[{"in_features": 2, "out_features": 1, "invalid_key": 123}])
+        NeuralNetwork(
+            layer_configs=[{"in_features": 2, "out_features": 1, "invalid_key": 123}]
+        )
 
 
 def test_config_with_non_callable_activation_raises() -> None:
     with pytest.raises(TypeError, match="must be callable"):
-        NeuralNetwork(layer_configs=[{"in_features": 2, "out_features": 1, "activation": "not_callable"}])
+        NeuralNetwork(
+            layer_configs=[
+                {"in_features": 2, "out_features": 1, "activation": "not_callable"}
+            ]
+        )
 
 
 def test_zero_grad_clears_all_layer_gradients() -> None:
@@ -168,8 +188,8 @@ def test_toy_training_reduces_loss() -> None:
         predictions = network.forward(inputs)
         grad_loss = mse_grad(predictions, targets)
         network.backward(grad_loss)
-        for layer in network.layers:
-            layer.apply_updates(optimizer)
+        for trainable_layer in network.layers:
+            cast(DenseLayer, trainable_layer).apply_updates(optimizer)
         network.zero_grad()
 
     final_loss = mse_loss(network.forward(inputs), targets)

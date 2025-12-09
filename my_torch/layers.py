@@ -36,9 +36,11 @@ class DenseLayer:
         in_features: Number of input features (must be positive).
         out_features: Number of output features (must be positive).
         activation: Activation function to apply; defaults to identity.
-        activation_derivative: Derivative of the activation function. If None, uses ones.
+        activation_derivative: Derivative of the activation function. If None, uses
+            ones.
         weight_initializer: Key specifying the weight initialization strategy.
-        bias_initializer: Policy for bias initialization; one of "zeros", "normal", or "uniform".
+        bias_initializer: Policy for bias initialization; one of "zeros", "normal", or
+            "uniform".
         rng: Optional random number generator for reproducibility.
 
     Raises:
@@ -65,18 +67,26 @@ class DenseLayer:
         if self.in_features <= 0 or self.out_features <= 0:
             raise ValueError("in_features and out_features must be positive")
         self.weights = initialize_weights(
-            (self.out_features, self.in_features), mode=self.weight_initializer, rng=self.rng
+            (self.out_features, self.in_features),
+            mode=self.weight_initializer,
+            rng=self.rng,
         )
-        self.bias = initialize_bias((self.out_features,), mode=self.bias_initializer, rng=self.rng)
+        self.bias = initialize_bias(
+            (self.out_features,), mode=self.bias_initializer, rng=self.rng
+        )
         self.grad_weights = np.zeros_like(self.weights)
         self.grad_bias = np.zeros_like(self.bias)
 
     def forward(self, inputs: ArrayFloat) -> ArrayFloat:
         x = np.asarray(inputs, dtype=float)
         if x.ndim != 2:
-            raise ValueError("inputs must be a 2D array of shape (batch_size, in_features)")
+            raise ValueError(
+                "inputs must be a 2D array of shape (batch_size, in_features)"
+            )
         if x.shape[1] != self.in_features:
-            raise ValueError(f"expected input feature dimension {self.in_features}, got {x.shape[1]}")
+            raise ValueError(
+                f"expected input feature dimension {self.in_features}, got {x.shape[1]}"
+            )
 
         self._last_input = x
         self._pre_activation = x @ self.weights.T + self.bias
@@ -94,12 +104,19 @@ class DenseLayer:
             return self.activation_derivative(self._pre_activation)
 
     def backward(self, grad_output: ArrayFloat) -> ArrayFloat:
-        if self._last_input is None or self._output is None or self._pre_activation is None:
+        if (
+            self._last_input is None
+            or self._output is None
+            or self._pre_activation is None
+        ):
             raise RuntimeError("forward must be called before backward")
 
         grad_out = np.asarray(grad_output, dtype=float)
         if grad_out.shape != self._output.shape:
-            raise ValueError(f"grad_output shape {grad_out.shape} does not match output shape {self._output.shape}")
+            raise ValueError(
+                f"grad_output shape {grad_out.shape} does not match output shape "
+                f"{self._output.shape}"
+            )
 
         local_grad = self._activation_grad()
         grad_z = grad_out * local_grad
