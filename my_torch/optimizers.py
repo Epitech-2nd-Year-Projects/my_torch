@@ -50,7 +50,9 @@ class SGD:
             grad_array = grad_array + self.weight_decay * param_array
         return param_array - self.lr * grad_array
 
-    def step(self, parameters: Sequence[ArrayFloat], gradients: Sequence[ArrayFloat]) -> None:
+    def step(
+        self, parameters: Sequence[ArrayFloat], gradients: Sequence[ArrayFloat]
+    ) -> None:
         """
         Update all parameters in place using the provided gradients.
 

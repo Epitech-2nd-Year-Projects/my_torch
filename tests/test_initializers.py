@@ -72,12 +72,12 @@ def test_initialize_bias_modes() -> None:
 
 def test_initialize_bias_invalid_mode_raises_value_error() -> None:
     with pytest.raises(ValueError):
-        initialize_bias((2,), mode="invalid")
+        initialize_bias((2,), mode="invalid")  # type: ignore[arg-type]
 
 
 def test_unknown_initializer_key_raises_value_error() -> None:
     with pytest.raises(ValueError):
-        get_initializer("does-not-exist")((2, 2))
+        get_initializer("does-not-exist")((2, 2))  # type: ignore[arg-type, call-arg]
 
 
 def test_fan_in_out_empty_shape_raises_value_error() -> None:

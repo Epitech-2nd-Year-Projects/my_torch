@@ -35,9 +35,7 @@ def tanh(x: np.ndarray) -> np.ndarray:
     return np.tanh(x)
 
 
-def tanh_derivative(
-    x: np.ndarray, tanh_output: np.ndarray | None = None
-) -> np.ndarray:
+def tanh_derivative(x: np.ndarray, tanh_output: np.ndarray | None = None) -> np.ndarray:
     """Derivative of tanh with optional precomputed output"""
     t = tanh_output if tanh_output is not None else np.tanh(x)
     return 1 - t**2
