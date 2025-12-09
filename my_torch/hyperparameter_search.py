@@ -157,9 +157,9 @@ def search_hyperparameters(
         raise ValueError("no hyperparameter configurations to evaluate")
 
     if optimizer_factory is None:
-        optimizer_factory = lambda config: SGD(  # type: ignore[assignment]
-            lr=config.learning_rate, weight_decay=config.weight_decay
-        )
+
+        def optimizer_factory(config: HyperparameterConfig) -> SGD:
+            return SGD(lr=config.learning_rate, weight_decay=config.weight_decay)
 
     if mode == "grid":
         if seed is not None or rng is not None:
