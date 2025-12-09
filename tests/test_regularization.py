@@ -10,6 +10,7 @@ from my_torch.training import train
 
 def test_l2_loss_reporting() -> None:
     network = NeuralNetwork([DenseLayer(2, 2, bias_initializer="zeros")])
+    assert isinstance(network.layers[0], DenseLayer)
     network.layers[0].weights.fill(1.0)
     network.layers[0].bias.fill(0.0)
 
@@ -50,6 +51,7 @@ def test_l2_loss_reporting() -> None:
 
 def test_l2_weight_decay_update() -> None:
     network = NeuralNetwork([DenseLayer(2, 2, bias_initializer="zeros")])
+    assert isinstance(network.layers[0], DenseLayer)
     network.layers[0].weights.fill(1.0)
     network.layers[0].bias.fill(0.0)
 

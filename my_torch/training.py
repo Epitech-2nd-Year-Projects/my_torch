@@ -248,13 +248,13 @@ def train(
         epoch_accuracy = 0.0
         seen = 0
 
+        reg_loss = _compute_l2_loss(network, weight_decay)
+
         for batch_inputs, batch_labels in _iter_batches(
             epoch_inputs, epoch_labels, batch_size
         ):
             logits = network.forward(batch_inputs)
             batch_loss = loss_fn(logits, batch_labels)
-
-            reg_loss = _compute_l2_loss(network, weight_decay)
 
             grad_logits = loss_grad_fn(logits, batch_labels)
 
