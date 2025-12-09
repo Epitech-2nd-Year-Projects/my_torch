@@ -33,10 +33,12 @@ class EpochMetrics:
 
 @dataclass(slots=True)
 class TrainingHistory:
-    """Per-epoch metrics for a full training run."""
+    """Per-epoch metrics plus best model tracking for a training run."""
 
     train: list[EpochMetrics]
     validation: list[EpochMetrics]
+    best_epoch: int | None = None
+    best_parameters: tuple[ArrayFloat, ...] | None = None
 
 
 def _resolve_rng(rng: np.random.Generator | None) -> np.random.Generator:
@@ -189,6 +191,7 @@ def train(
     rng: np.random.Generator | None = None,
     accuracy_fn: AccuracyFn | None = None,
     weight_decay: float = 0.0,
+    early_stopping_patience: int | None = None,
 ) -> TrainingHistory:
     """
     Train a network with mini-batch updates and return per-epoch metrics
@@ -211,8 +214,10 @@ def train(
                       adds L2 loss to reported metrics.
                       Optimizers supporting weight decay should be configured with it
                       directly during their instantiation.
+        early_stopping_patience: Optional number of consecutive epochs without
+            validation-loss improvement to tolerate before stopping early.
     Returns:
-        TrainingHistory containing train and validation metrics per epoch
+        TrainingHistory containing train/validation metrics and best model data
     Raises:
         ValueError: when shapes are inconsistent or hyperparameters are invalid
         TypeError: when labels are not integer class indices
@@ -223,6 +228,8 @@ def train(
         raise ValueError("batch_size must be positive")
     if weight_decay < 0:
         raise ValueError("weight_decay must be non-negative")
+    if early_stopping_patience is not None and early_stopping_patience <= 0:
+        raise ValueError("early_stopping_patience must be positive when provided")
 
     train_inputs_array, train_labels_array = _validate_inputs(
         train_inputs, train_labels
@@ -235,7 +242,12 @@ def train(
     train_history: list[EpochMetrics] = []
     val_history: list[EpochMetrics] = []
 
-    for _ in range(epochs):
+    best_val_loss = float("inf")
+    best_epoch: int | None = None
+    best_parameters: tuple[ArrayFloat, ...] | None = None
+    epochs_since_improvement = 0
+
+    for epoch_index in range(epochs):
         if shuffle:
             indices = rng_instance.permutation(num_train)
             epoch_inputs = train_inputs_array[indices]
@@ -279,5 +291,26 @@ def train(
                 network, val_inputs_array, val_labels_array, batch_size, loss_fn, metric
             )
         )
+        current_val_loss = val_history[-1].loss
+        improved = current_val_loss < best_val_loss
+        if improved or best_parameters is None:
+            best_val_loss = current_val_loss
+            best_epoch = epoch_index
+            best_parameters = tuple(
+                np.array(param, copy=True) for param in network.parameters()
+            )
+            epochs_since_improvement = 0
+        else:
+            epochs_since_improvement += 1
+        if (
+            early_stopping_patience is not None
+            and epochs_since_improvement >= early_stopping_patience
+        ):
+            break
 
-    return TrainingHistory(train=train_history, validation=val_history)
+    return TrainingHistory(
+        train=train_history,
+        validation=val_history,
+        best_epoch=best_epoch,
+        best_parameters=best_parameters,
+    )
