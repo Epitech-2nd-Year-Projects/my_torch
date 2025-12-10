@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import numpy.testing as npt
@@ -51,3 +52,29 @@ def test_save_and_load_roundtrip(tmp_path: Path) -> None:
     assert metadata.extras == extra_meta
     assert len(metadata.architecture["layers"]) == 2
     assert metadata.architecture["layers"][0]["in_features"] == 3
+
+
+def test_save_and_load_network_wrappers(tmp_path: Path) -> None:
+    from my_torch.nn_io import load_network, save_network
+
+    rng = np.random.default_rng(42)
+    layer = DenseLayer(
+        in_features=5,
+        out_features=2,
+        activation=relu,
+        rng=rng,
+    )
+    network = NeuralNetwork(layers=[layer])
+    metadata = {"accuracy": 0.95, "epoch": 10}
+
+    path = tmp_path / "wrapper_test.nn"
+    save_network(path, network, metadata)
+
+    loaded_network = load_network(path)
+
+    assert isinstance(loaded_network, NeuralNetwork)
+    assert len(loaded_network.layers) == 1
+
+    loaded_layer: DenseLayer = cast(DenseLayer, loaded_network.layers[0])
+    npt.assert_allclose(loaded_layer.weights, network.layers[0].weights)
+    npt.assert_allclose(loaded_layer.bias, network.layers[0].bias)
