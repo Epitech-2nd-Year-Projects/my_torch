@@ -23,7 +23,9 @@ from .losses import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
 from .neural_network import NeuralNetwork
 from .nn_io import (
     SerializedModelMetadata,
+    load_network,
     load_nn,
+    save_network,
     save_nn,
 )
 from .optimizers import SGD
@@ -57,7 +59,9 @@ __all__ = [
     "DenseLayer",
     "SGD",
     "NeuralNetwork",
+    "save_network",
     "save_nn",
+    "load_network",
     "load_nn",
     "SerializedModelMetadata",
 ]

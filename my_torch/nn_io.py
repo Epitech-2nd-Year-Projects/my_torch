@@ -170,6 +170,30 @@ def load_nn(
     return network, metadata_obj
 
 
+def save_network(
+    path: str | Path,
+    network: NeuralNetwork,
+    metadata: Mapping[str, Any] | None = None,
+) -> None:
+    """
+    Save a neural network and metadata to a file.
+
+    Wrapper around `save_nn` to match the project requirements.
+    """
+    save_nn(network, path, extra_metadata=metadata)
+
+
+def load_network(path: str | Path) -> NeuralNetwork:
+    """
+    Load a neural network from a file.
+
+    Wrapper around `load_nn` to match the project requirements.
+    Returns only the reconstructed NeuralNetwork instance.
+    """
+    network, _ = load_nn(path)
+    return network
+
+
 def _serialize_parameters(network: NeuralNetwork) -> dict[str, np.ndarray]:
     arrays: dict[str, np.ndarray] = {}
     for idx, layer in enumerate(network.layers):
