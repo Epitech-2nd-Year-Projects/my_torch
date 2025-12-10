@@ -78,3 +78,60 @@ def test_save_and_load_network_wrappers(tmp_path: Path) -> None:
     loaded_layer: DenseLayer = cast(DenseLayer, loaded_network.layers[0])
     npt.assert_allclose(loaded_layer.weights, network.layers[0].weights)
     npt.assert_allclose(loaded_layer.bias, network.layers[0].bias)
+
+
+def test_serialization_predictions_roundtrip(tmp_path: Path) -> None:
+    """
+    Ensure that a saved and loaded network produces identical predictions
+    and has identical parameters to the original network.
+    """
+    rng = np.random.default_rng(123)
+
+    layer1 = DenseLayer(
+        in_features=5,
+        out_features=8,
+        activation=relu,
+        weight_initializer="he",
+        rng=rng,
+    )
+    layer2 = DenseLayer(
+        in_features=8,
+        out_features=3,
+        activation=sigmoid,
+        weight_initializer="xavier",
+        rng=rng,
+    )
+    network = NeuralNetwork(layers=[layer1, layer2])
+
+    for layer in network.layers:
+        assert np.any(layer.weights != 0), (
+            "Weights should be initialized to non-zero values"
+        )
+
+    input_data = rng.standard_normal((4, 5))
+    prediction_before = network.forward(input_data)
+
+    save_path = tmp_path / "prediction_roundtrip.nn"
+    save_nn(network, save_path)
+
+    loaded_network, _ = load_nn(save_path)
+
+    prediction_after = loaded_network.forward(input_data)
+
+    npt.assert_allclose(
+        prediction_after,
+        prediction_before,
+        err_msg="Predictions should be identical after loading",
+    )
+
+    for i, (orig_layer, loaded_layer) in enumerate(
+        zip(network.layers, loaded_network.layers)
+    ):
+        npt.assert_allclose(
+            loaded_layer.weights,
+            orig_layer.weights,
+            err_msg=f"Layer {i} weights mismatch",
+        )
+        npt.assert_allclose(
+            loaded_layer.bias, orig_layer.bias, err_msg=f"Layer {i} bias mismatch"
+        )
