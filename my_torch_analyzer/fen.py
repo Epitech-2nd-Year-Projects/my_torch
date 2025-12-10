@@ -170,7 +170,8 @@ def _parse_en_passant(field: str) -> str | None:
     if len(field) != 2:
         raise FENError("En passant target square must be '-' or a valid board square.")
 
-    file_char, rank_char = field
+    file_char = field[0]
+    rank_char = field[1]
     if file_char not in "abcdefgh":
         raise FENError("En passant file must be a letter from a to h.")
     if rank_char not in "36":
