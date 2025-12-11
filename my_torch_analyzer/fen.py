@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Tuple
 
+import numpy as np
+
 BoardSquare = str | None
 BoardRow = Tuple[BoardSquare, ...]
 Board = Tuple[BoardRow, ...]
@@ -199,3 +201,76 @@ def _parse_int(value: str, field_name: str) -> int:
         return int(value)
     except ValueError as exc:
         raise FENError(f"{field_name} must be an integer.") from exc
+
+
+def fen_to_tensor(fen: str | FENPosition) -> np.ndarray:
+    """Encodes a FEN string or FENPosition into a NumPy tensor.
+
+    The output is a (18, 8, 8) float32 NumPy array. The channels are defined as follows:
+
+    - Channels 0-5: White pieces (P, N, B, R, Q, K)
+    - Channels 6-11: Black pieces (p, n, b, r, q, k)
+    - Channel 12: En Passant target (1 at the target square, 0 elsewhere)
+    - Channel 13: White Kingside Castling (all 1s if allowed, 0 otherwise)
+    - Channel 14: White Queenside Castling (all 1s if allowed, 0 otherwise)
+    - Channel 15: Black Kingside Castling (all 1s if allowed, 0 otherwise)
+    - Channel 16: Black Queenside Castling (all 1s if allowed, 0 otherwise)
+    - Channel 17: Active Color (all 1s if White, all 0s if Black)
+
+    Args:
+        fen: The FEN string or FENPosition object to encode.
+
+    Returns:
+        A NumPy array of shape (18, 8, 8) representing the board state.
+    """
+    if isinstance(fen, str):
+        position = parse_fen(fen)
+    else:
+        position = fen
+
+    tensor = np.zeros((18, 8, 8), dtype=np.float32)
+
+    piece_map = {
+        "P": 0,
+        "N": 1,
+        "B": 2,
+        "R": 3,
+        "Q": 4,
+        "K": 5,
+        "p": 6,
+        "n": 7,
+        "b": 8,
+        "r": 9,
+        "q": 10,
+        "k": 11,
+    }
+
+    for row_idx, row in enumerate(position.board):
+        for col_idx, square in enumerate(row):
+            if square and square in piece_map:
+                channel = piece_map[square]
+                tensor[channel, row_idx, col_idx] = 1.0
+
+    if position.en_passant_target:
+        file_char = position.en_passant_target[0]
+        rank_char = position.en_passant_target[1]
+
+        col_idx = ord(file_char) - ord("a")
+        row_idx = 8 - int(rank_char)
+
+        if 0 <= row_idx < 8 and 0 <= col_idx < 8:
+            tensor[12, row_idx, col_idx] = 1.0
+
+    if position.castling_rights.white_kingside:
+        tensor[13, :, :] = 1.0
+    if position.castling_rights.white_queenside:
+        tensor[14, :, :] = 1.0
+    if position.castling_rights.black_kingside:
+        tensor[15, :, :] = 1.0
+    if position.castling_rights.black_queenside:
+        tensor[16, :, :] = 1.0
+
+    if position.active_color == "w":
+        tensor[17, :, :] = 1.0
+
+    return tensor
