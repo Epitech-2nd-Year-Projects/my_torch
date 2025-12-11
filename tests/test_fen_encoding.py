@@ -1,6 +1,6 @@
 import numpy as np
-import pytest
-from my_torch_analyzer.fen import parse_fen, fen_to_tensor, FENPosition
+
+from my_torch_analyzer.fen import fen_to_tensor, parse_fen
 
 
 def test_fen_to_tensor_shape():
