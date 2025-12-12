@@ -66,3 +66,30 @@ def test_fen_to_tensor_from_object():
     tensor = fen_to_tensor(position)
     assert tensor.shape == (18, 8, 8)
     assert tensor[5, 7, 4] == 1.0
+
+
+def test_fen_to_tensor_consistency() -> None:
+    fen = "r1bqkbnr/pp1ppppp/2n5/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3"
+    tensor = fen_to_tensor(fen)
+
+    assert tensor[1, 5, 5] == 1.0
+    assert tensor[6, 3, 2] == 1.0
+    assert tensor[5, 7, 4] == 1.0
+    assert tensor[11, 0, 4] == 1.0
+
+    assert np.sum(tensor[0:12, 6, 4]) == 0.0
+
+    assert np.all(tensor[17] == 1.0)
+
+    assert np.all(tensor[13:17] == 1.0)
+
+
+def test_fen_to_tensor_sparse() -> None:
+    fen = "4k3/8/8/8/8/8/8/4K3 w - - 0 1"
+    tensor = fen_to_tensor(fen)
+
+    assert np.sum(tensor[0:12]) == 2.0
+
+    assert np.sum(tensor[12]) == 0.0
+
+    assert np.sum(tensor[13:17]) == 0.0
