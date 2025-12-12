@@ -59,3 +59,45 @@ def load_dataset(file_path: str) -> tuple[NDArray[np.float32], NDArray[np.int64]
         np.array(inputs, dtype=np.float32),
         np.array(targets, dtype=np.int64),
     )
+
+
+def load_prediction_dataset(file_path: str) -> NDArray[np.float32]:
+    """
+    Loads a chessboard prediction dataset from a file.
+
+    Each line in the file is expected to contain a FEN string (6 fields).
+    Any additional fields (e.g. labels) are ignored.
+
+    Args:
+        file_path: Path to the dataset file.
+
+    Returns:
+        A NumPy array of shape (N, 18, 8, 8) containing the encoded boards.
+
+    Raises:
+        ValueError: If a line is malformed or parsing fails.
+    """
+    inputs = []
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line_num, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line:
+                continue
+
+            parts = line.split()
+            if len(parts) < 6:
+                raise ValueError(
+                    f"Line {line_num}: Malformed line. Expected at least 6 fields "
+                    "for FEN."
+                )
+
+            fen_str = " ".join(parts[:6])
+
+            try:
+                tensor = fen_to_tensor(fen_str)
+                inputs.append(tensor)
+            except Exception as exc:
+                raise ValueError(f"Line {line_num}: Failed to parse data.") from exc
+
+    return np.array(inputs, dtype=np.float32)
