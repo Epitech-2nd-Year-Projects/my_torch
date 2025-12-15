@@ -3,8 +3,11 @@ import sys
 
 import numpy as np
 
-from my_torch.nn_io import load_network
-from my_torch_analyzer.dataset import load_prediction_dataset
+from my_torch.losses import cross_entropy_grad, cross_entropy_loss
+from my_torch.nn_io import load_network, save_network
+from my_torch.optimizers import SGD
+from my_torch.training import train, train_validation_split
+from my_torch_analyzer.dataset import load_dataset, load_prediction_dataset
 from my_torch_analyzer.labels import get_label_from_index
 
 HELP_TEXT = """USAGE
@@ -82,7 +85,47 @@ def main() -> int:
             return 1
 
     elif args.train:
-        pass
+        try:
+            network = load_network(args.loadfile)
+            inputs, labels = load_dataset(args.chessfile)
+            inputs = inputs.reshape(inputs.shape[0], -1)
+
+            (
+                train_inputs,
+                val_inputs,
+                train_labels,
+                val_labels,
+            ) = train_validation_split(inputs, labels)
+
+            optimizer = SGD(lr=0.01, weight_decay=0.001)
+
+            history = train(
+                network=network,
+                optimizer=optimizer,
+                train_inputs=train_inputs,
+                train_labels=train_labels,
+                val_inputs=val_inputs,
+                val_labels=val_labels,
+                loss_fn=cross_entropy_loss,
+                loss_grad_fn=cross_entropy_grad,
+                epochs=100,
+                batch_size=32,
+                early_stopping_patience=10,
+                weight_decay=0.001,
+            )
+
+            if history.best_parameters is not None:
+                for param, best_param in zip(
+                    network.parameters(), history.best_parameters
+                ):
+                    param[...] = best_param
+
+            save_path = args.save if args.save else args.loadfile
+            save_network(save_path, network)
+
+        except Exception as e:
+            print(f"Error during training: {e}")
+            return 1
 
     return 0
 
