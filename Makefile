@@ -10,7 +10,13 @@ RUFF := $(PYTHON_BIN) -m ruff
 all: $(INSTALL_STAMP)
 
 $(VENV)/bin/python:
-	$(PYTHON) -m venv $(VENV)
+	$(PYTHON) -m venv $(VENV) || $(PYTHON) -m venv --without-pip $(VENV)
+	$(VENV)/bin/python -m pip --version >/dev/null 2>&1 || { \
+		echo "Pip not found, installing..."; \
+		curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py; \
+		$(VENV)/bin/python get-pip.py; \
+		rm get-pip.py; \
+	}
 
 $(INSTALL_STAMP): $(VENV)/bin/python pyproject.toml
 	$(PYTHON_BIN) -m pip install --upgrade pip
