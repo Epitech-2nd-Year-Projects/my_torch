@@ -10,6 +10,9 @@ from my_torch.training import train, train_validation_split
 from my_torch_analyzer.dataset import load_dataset, load_prediction_dataset
 from my_torch_analyzer.labels import get_label_from_index
 
+EXIT_SUCCESS = 0
+EXIT_ERROR = 84
+
 HELP_TEXT = """USAGE
 ./my_torch_analyzer [--predict | --train [--save SAVEFILE]] LOADFILE CHESSFILE
 DESCRIPTION
@@ -30,15 +33,91 @@ CHESSFILE
 File containing chessboards"""
 
 
+class SubjectArgumentParser(argparse.ArgumentParser):
+    """
+    Custom ArgumentParser that exits with code 84 on error, as required by the subject.
+    """
+
+    def error(self, message):
+        print(HELP_TEXT)
+        print(f"Error: {message}", file=sys.stderr)
+        sys.exit(EXIT_ERROR)
+
+
+def run_analyzer(args: argparse.Namespace) -> None:
+    """
+    Core logic for handling the analyzer commands.
+    """
+    if args.predict and args.train:
+        raise ValueError("--predict and --train are mutually exclusive.")
+
+    if not args.predict and not args.train:
+        raise ValueError("You must specify either --predict or --train.")
+
+    if args.predict and args.save:
+        raise ValueError("--save is only valid in --train mode.")
+
+    if not args.loadfile or not args.chessfile:
+        raise ValueError("Missing LOADFILE or CHESSFILE.")
+
+    if args.predict:
+        network = load_network(args.loadfile)
+        inputs = load_prediction_dataset(args.chessfile)
+        inputs = inputs.reshape(inputs.shape[0], -1)
+
+        outputs = network.forward(inputs)
+
+        predicted_indices = np.argmax(outputs, axis=1)
+
+        for idx in predicted_indices:
+            print(get_label_from_index(idx))
+
+    elif args.train:
+        network = load_network(args.loadfile)
+        inputs, labels = load_dataset(args.chessfile)
+        inputs = inputs.reshape(inputs.shape[0], -1)
+
+        (
+            train_inputs,
+            val_inputs,
+            train_labels,
+            val_labels,
+        ) = train_validation_split(inputs, labels)
+
+        optimizer = SGD(lr=0.01, weight_decay=0.001)
+
+        history = train(
+            network=network,
+            optimizer=optimizer,
+            train_inputs=train_inputs,
+            train_labels=train_labels,
+            val_inputs=val_inputs,
+            val_labels=val_labels,
+            loss_fn=cross_entropy_loss,
+            loss_grad_fn=cross_entropy_grad,
+            epochs=100,
+            batch_size=32,
+            early_stopping_patience=10,
+            weight_decay=0.001,
+        )
+
+        if history.best_parameters is not None:
+            for param, best_param in zip(network.parameters(), history.best_parameters):
+                param[...] = best_param
+
+        save_path = args.save if args.save else args.loadfile
+        save_network(save_path, network)
+
+
 def main() -> int:
     """
     Main entry point for the my_torch_analyzer CLI.
     """
     if "-h" in sys.argv or "--help" in sys.argv:
         print(HELP_TEXT)
-        return 0
+        return EXIT_SUCCESS
 
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = SubjectArgumentParser(add_help=False)
     parser.add_argument("--predict", action="store_true")
     parser.add_argument("--train", action="store_true")
     parser.add_argument("--save", type=str)
@@ -47,87 +126,15 @@ def main() -> int:
 
     try:
         args = parser.parse_args()
-    except SystemExit:
-        return 1
+        run_analyzer(args)
+        return EXIT_SUCCESS
 
-    if not args.loadfile or not args.chessfile:
-        print(HELP_TEXT.split("\n")[0])
-        print(HELP_TEXT.split("\n")[1])
-        return 1
-
-    if args.predict and args.train:
-        print("Error: --predict and --train are mutually exclusive.")
-        return 1
-
-    if not args.predict and not args.train:
-        print("Error: You must specify either --predict or --train.")
-        return 1
-
-    if args.predict and args.save:
-        print("Error: --save is only valid in --train mode.")
-        return 1
-
-    if args.predict:
-        try:
-            network = load_network(args.loadfile)
-            inputs = load_prediction_dataset(args.chessfile)
-            inputs = inputs.reshape(inputs.shape[0], -1)
-
-            outputs = network.forward(inputs)
-
-            predicted_indices = np.argmax(outputs, axis=1)
-
-            for idx in predicted_indices:
-                print(get_label_from_index(idx))
-
-        except Exception as e:
-            print(f"Error during prediction: {e}")
-            return 1
-
-    elif args.train:
-        try:
-            network = load_network(args.loadfile)
-            inputs, labels = load_dataset(args.chessfile)
-            inputs = inputs.reshape(inputs.shape[0], -1)
-
-            (
-                train_inputs,
-                val_inputs,
-                train_labels,
-                val_labels,
-            ) = train_validation_split(inputs, labels)
-
-            optimizer = SGD(lr=0.01, weight_decay=0.001)
-
-            history = train(
-                network=network,
-                optimizer=optimizer,
-                train_inputs=train_inputs,
-                train_labels=train_labels,
-                val_inputs=val_inputs,
-                val_labels=val_labels,
-                loss_fn=cross_entropy_loss,
-                loss_grad_fn=cross_entropy_grad,
-                epochs=100,
-                batch_size=32,
-                early_stopping_patience=10,
-                weight_decay=0.001,
-            )
-
-            if history.best_parameters is not None:
-                for param, best_param in zip(
-                    network.parameters(), history.best_parameters
-                ):
-                    param[...] = best_param
-
-            save_path = args.save if args.save else args.loadfile
-            save_network(save_path, network)
-
-        except Exception as e:
-            print(f"Error during training: {e}")
-            return 1
-
-    return 0
+    except FileNotFoundError as e:
+        print(f"Error: File not found: {e}", file=sys.stderr)
+        return EXIT_ERROR
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return EXIT_ERROR
 
 
 if __name__ == "__main__":
