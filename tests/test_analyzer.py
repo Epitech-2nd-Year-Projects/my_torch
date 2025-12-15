@@ -44,13 +44,47 @@ def test_main_predict_valid(
         assert main() == 0
 
 
-def test_main_train_valid(capsys: pytest.CaptureFixture[str]) -> None:
+@patch("my_torch_analyzer.cli.save_network")
+@patch("my_torch_analyzer.cli.train")
+@patch("my_torch_analyzer.cli.train_validation_split")
+@patch("my_torch_analyzer.cli.load_dataset")
+@patch("my_torch_analyzer.cli.load_network")
+def test_main_train_valid(
+    mock_load_net: Any,
+    mock_load_data: Any,
+    mock_split: Any,
+    mock_train: Any,
+    mock_save: Any,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    mock_load_net.return_value = MagicMock(parameters=lambda: [])
+    mock_load_data.return_value = (MagicMock(shape=(10, 1152)), MagicMock())
+    mock_split.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
+    mock_train.return_value = MagicMock(best_parameters=None)
+
     args = ["my_torch_analyzer", "--train", "model.nn", "games.fen"]
     with patch.object(sys, "argv", args):
         assert main() == 0
 
 
-def test_main_train_save_valid(capsys: pytest.CaptureFixture[str]) -> None:
+@patch("my_torch_analyzer.cli.save_network")
+@patch("my_torch_analyzer.cli.train")
+@patch("my_torch_analyzer.cli.train_validation_split")
+@patch("my_torch_analyzer.cli.load_dataset")
+@patch("my_torch_analyzer.cli.load_network")
+def test_main_train_save_valid(
+    mock_load_net: Any,
+    mock_load_data: Any,
+    mock_split: Any,
+    mock_train: Any,
+    mock_save: Any,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    mock_load_net.return_value = MagicMock(parameters=lambda: [])
+    mock_load_data.return_value = (MagicMock(shape=(10, 1152)), MagicMock())
+    mock_split.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
+    mock_train.return_value = MagicMock(best_parameters=None)
+
     args = [
         "my_torch_analyzer",
         "--train",
