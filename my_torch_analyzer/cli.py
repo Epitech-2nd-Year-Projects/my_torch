@@ -1,6 +1,12 @@
 import argparse
 import sys
 
+import numpy as np
+
+from my_torch.nn_io import load_network
+from my_torch_analyzer.dataset import load_prediction_dataset
+from my_torch_analyzer.labels import get_label_from_index
+
 HELP_TEXT = """USAGE
 ./my_torch_analyzer [--predict | --train [--save SAVEFILE]] LOADFILE CHESSFILE
 DESCRIPTION
@@ -59,7 +65,22 @@ def main() -> int:
         return 1
 
     if args.predict:
-        pass
+        try:
+            network = load_network(args.loadfile)
+            inputs = load_prediction_dataset(args.chessfile)
+            inputs = inputs.reshape(inputs.shape[0], -1)
+
+            outputs = network.forward(inputs)
+
+            predicted_indices = np.argmax(outputs, axis=1)
+
+            for idx in predicted_indices:
+                print(get_label_from_index(idx))
+
+        except Exception as e:
+            print(f"Error during prediction: {e}")
+            return 1
+
     elif args.train:
         pass
 

@@ -104,9 +104,9 @@ def test_serialization_predictions_roundtrip(tmp_path: Path) -> None:
     network = NeuralNetwork(layers=[layer1, layer2])
 
     for layer in network.layers:
-        assert np.any(layer.weights != 0), (
-            "Weights should be initialized to non-zero values"
-        )
+        assert np.any(
+            layer.weights != 0
+        ), "Weights should be initialized to non-zero values"
 
     input_data = rng.standard_normal((4, 5))
     prediction_before = network.forward(input_data)
