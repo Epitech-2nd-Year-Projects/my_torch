@@ -68,14 +68,15 @@ def main() -> int:
         try:
             network = load_network(args.loadfile)
             inputs = load_prediction_dataset(args.chessfile)
-            
+            inputs = inputs.reshape(inputs.shape[0], -1)
+
             outputs = network.forward(inputs)
-            
+
             predicted_indices = np.argmax(outputs, axis=1)
-            
+
             for idx in predicted_indices:
                 print(get_label_from_index(idx))
-                
+
         except Exception as e:
             print(f"Error during prediction: {e}")
             return 1
