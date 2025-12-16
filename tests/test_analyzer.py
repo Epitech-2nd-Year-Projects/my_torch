@@ -76,6 +76,11 @@ def test_main_train(
 
     mock_history = MagicMock()
     mock_history.best_parameters = [np.array([1.0])]
+    mock_metric = MagicMock()
+    mock_metric.loss = 0.5
+    mock_metric.accuracy = 0.8
+    mock_history.train = [mock_metric]
+    mock_history.validation = [mock_metric]
     mock_train.return_value = mock_history
 
     mock_param = np.array([0.0])
@@ -107,7 +112,14 @@ def test_main_train_with_save(
     mock_load_network.return_value = mock_network
     mock_load_dataset.return_value = (MagicMock(), MagicMock())
     mock_split.return_value = (MagicMock(), MagicMock(), MagicMock(), MagicMock())
-    mock_train.return_value = MagicMock()
+    mock_history = MagicMock()
+    mock_history.best_parameters = None
+    mock_metric = MagicMock()
+    mock_metric.loss = 0.5
+    mock_metric.accuracy = 0.8
+    mock_history.train = [mock_metric]
+    mock_history.validation = [mock_metric]
+    mock_train.return_value = mock_history
 
     args = [
         "my_torch_analyzer",
