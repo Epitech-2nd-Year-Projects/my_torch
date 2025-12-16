@@ -14,7 +14,13 @@ LossFn = Callable[[ArrayFloat, ArrayInt], float]
 LossGradFn = Callable[[ArrayFloat, ArrayInt], ArrayFloat]
 AccuracyFn = Callable[[ArrayFloat, ArrayInt], float]
 
-__all__ = ["EpochMetrics", "TrainingHistory", "train_validation_split", "train"]
+__all__ = [
+    "EpochMetrics",
+    "TrainingHistory",
+    "train_validation_split",
+    "train",
+    "Optimizer",
+]
 
 
 class Optimizer(Protocol):

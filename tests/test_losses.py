@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from typing import Callable
+
 import numpy as np
 import pytest
 
 from my_torch import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
 
 
-def numerical_gradient(func, values: np.ndarray, epsilon: float = 1e-5) -> np.ndarray:
+def numerical_gradient(
+    func: Callable[[np.ndarray], float], values: np.ndarray, epsilon: float = 1e-5
+) -> np.ndarray:
     grad = np.zeros_like(values, dtype=float)
     for index in np.ndindex(values.shape):
         original = values[index]
@@ -34,10 +38,8 @@ def test_cross_entropy_gradient_matches_finite_difference() -> None:
 
 
 def test_cross_entropy_loss_matches_manual_value() -> None:
-    # Two samples, three classes; targets pick class 0 then 2
     logits = np.array([[2.0, 0.0, -2.0], [0.0, 0.0, 2.0]])
     target = np.array([0, 2])
-    # Softmax probabilities
     probs = np.array(
         [
             np.exp([2.0, 0.0, -2.0]) / np.sum(np.exp([2.0, 0.0, -2.0])),
@@ -45,7 +47,7 @@ def test_cross_entropy_loss_matches_manual_value() -> None:
         ]
     )
     manual_loss = -np.log(probs[0, 0]) - np.log(probs[1, 2])
-    manual_loss /= 2  # mean over batch
+    manual_loss /= 2
     computed_loss = cross_entropy_loss(logits, target)
     assert np.allclose(computed_loss, manual_loss)
 

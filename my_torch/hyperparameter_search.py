@@ -5,10 +5,13 @@ from itertools import product
 from typing import Callable, Iterable, Literal, Sequence
 
 import numpy as np
+from numpy.typing import NDArray
 
 from .neural_network import NeuralNetwork
-from .optimizers import SGD
-from .training import AccuracyFn, LossFn, LossGradFn, TrainingHistory, train
+from .training import AccuracyFn, LossFn, LossGradFn, Optimizer, TrainingHistory, train
+
+ArrayFloat = NDArray[np.floating]
+ArrayInt = NDArray[np.integer]
 
 SearchMode = Literal["grid", "random"]
 
@@ -100,10 +103,10 @@ def _select_random_configs(
 
 def search_hyperparameters(
     network_builder: Callable[[], NeuralNetwork],
-    train_inputs,
-    train_labels,
-    val_inputs,
-    val_labels,
+    train_inputs: ArrayFloat,
+    train_labels: ArrayInt,
+    val_inputs: ArrayFloat,
+    val_labels: ArrayInt,
     *,
     loss_fn: LossFn,
     loss_grad_fn: LossGradFn,
@@ -113,7 +116,7 @@ def search_hyperparameters(
     epochs: int,
     mode: SearchMode = "grid",
     num_samples: int | None = None,
-    optimizer_factory: Callable[[HyperparameterConfig], SGD] | None = None,
+    optimizer_factory: Callable[[HyperparameterConfig], Optimizer] | None = None,
     shuffle: bool = True,
     accuracy_fn: AccuracyFn | None = None,
     seed: int | None = None,
@@ -157,6 +160,7 @@ def search_hyperparameters(
         raise ValueError("no hyperparameter configurations to evaluate")
 
     if optimizer_factory is None:
+        from .optimizers import SGD
 
         def optimizer_factory(config: HyperparameterConfig) -> SGD:
             return SGD(lr=config.learning_rate, weight_decay=config.weight_decay)

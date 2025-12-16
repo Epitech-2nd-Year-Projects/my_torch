@@ -244,7 +244,7 @@ def _callable_to_name(
     if name:
         if allow_identity and name == "<lambda>":
             return _IDENTITY_NAME
-        return name
+        return str(name)
     raise ValueError(
         "callables used in serializable layers must define a __name__ attribute"
     )

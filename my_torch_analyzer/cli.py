@@ -1,5 +1,6 @@
 import argparse
 import sys
+from typing import NoReturn
 
 import numpy as np
 
@@ -38,7 +39,7 @@ class SubjectArgumentParser(argparse.ArgumentParser):
     Custom ArgumentParser that exits with code 84 on error, as required by the subject.
     """
 
-    def error(self, message):
+    def error(self, message: str) -> NoReturn:
         print(HELP_TEXT)
         print(f"Error: {message}", file=sys.stderr)
         sys.exit(EXIT_ERROR)
