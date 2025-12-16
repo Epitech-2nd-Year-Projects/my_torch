@@ -1,6 +1,9 @@
 import argparse
 import sys
+from pathlib import Path
 from typing import Any, Dict, List
+
+sys.path.append(str(Path(__file__).parents[1]))
 
 from my_torch.activations import relu, relu_derivative
 from my_torch.losses import cross_entropy_grad, cross_entropy_loss
