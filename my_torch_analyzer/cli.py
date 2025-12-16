@@ -101,6 +101,19 @@ def run_analyzer(args: argparse.Namespace) -> None:
             weight_decay=0.001,
         )
 
+        final_train = history.train[-1] if history.train else None
+        final_val = history.validation[-1] if history.validation else None
+        num_epochs = len(history.train)
+
+        print("\nTraining Summary:")
+        if final_train:
+            print(f"Final Training Loss: {final_train.loss:.4f}")
+            print(f"Final Training Accuracy: {final_train.accuracy:.4f}")
+        if final_val:
+            print(f"Final Validation Loss: {final_val.loss:.4f}")
+            print(f"Final Validation Accuracy: {final_val.accuracy:.4f}")
+        print(f"Epochs Performed: {num_epochs}")
+
         if history.best_parameters is not None:
             for param, best_param in zip(network.parameters(), history.best_parameters):
                 param[...] = best_param

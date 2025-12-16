@@ -88,6 +88,9 @@ def test_integration_train_and_predict(tmp_path):
 
     assert train_result.returncode == 0, f"Training failed: {train_result.stderr}"
     assert saved_model_path.exists(), "Saved model file was not created"
+    assert "Training Summary:" in train_result.stdout
+    assert "Final Training Loss:" in train_result.stdout
+    assert "Epochs Performed:" in train_result.stdout
 
     predict_args = ["--predict", str(saved_model_path), str(train_data_path)]
     predict_result = run_cli(predict_args)
