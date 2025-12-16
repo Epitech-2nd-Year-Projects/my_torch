@@ -1,19 +1,24 @@
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
+from numpy.typing import NDArray
+
+ArrayFloat = NDArray[np.floating]
 
 
-def relu(x: np.ndarray) -> np.ndarray:
+def relu(x: ArrayFloat) -> ArrayFloat:
     """Rectified linear activation"""
     return np.maximum(0, x)
 
 
-def relu_derivative(x: np.ndarray) -> np.ndarray:
+def relu_derivative(x: ArrayFloat) -> ArrayFloat:
     """Derivative of ReLU with respect to x"""
     return (x > 0).astype(x.dtype, copy=False)
 
 
-def sigmoid(x: np.ndarray) -> np.ndarray:
+def sigmoid(x: ArrayFloat) -> ArrayFloat:
     """Sigmoid activation with stable computation"""
     return np.where(
         x >= 0,
@@ -23,34 +28,34 @@ def sigmoid(x: np.ndarray) -> np.ndarray:
 
 
 def sigmoid_derivative(
-    x: np.ndarray, sigmoid_output: np.ndarray | None = None
-) -> np.ndarray:
+    x: ArrayFloat, sigmoid_output: ArrayFloat | None = None
+) -> ArrayFloat:
     """Derivative of sigmoid with optional precomputed output"""
     s = sigmoid_output if sigmoid_output is not None else sigmoid(x)
     return s * (1 - s)
 
 
-def tanh(x: np.ndarray) -> np.ndarray:
+def tanh(x: ArrayFloat) -> ArrayFloat:
     """Hyperbolic tangent activation"""
     return np.tanh(x)
 
 
-def tanh_derivative(x: np.ndarray, tanh_output: np.ndarray | None = None) -> np.ndarray:
+def tanh_derivative(x: ArrayFloat, tanh_output: ArrayFloat | None = None) -> ArrayFloat:
     """Derivative of tanh with optional precomputed output"""
     t = tanh_output if tanh_output is not None else np.tanh(x)
     return 1 - t**2
 
 
-def softmax(x: np.ndarray, axis: int = -1) -> np.ndarray:
+def softmax(x: ArrayFloat, axis: int = -1) -> ArrayFloat:
     """Softmax over the given axis with overflow protection"""
     shifted = x - np.max(x, axis=axis, keepdims=True)
     exps = np.exp(shifted)
-    return exps / np.sum(exps, axis=axis, keepdims=True)
+    return cast(ArrayFloat, exps / np.sum(exps, axis=axis, keepdims=True))
 
 
 def softmax_derivative(
-    x: np.ndarray, axis: int = -1, softmax_output: np.ndarray | None = None
-) -> np.ndarray:
+    x: ArrayFloat, axis: int = -1, softmax_output: ArrayFloat | None = None
+) -> ArrayFloat:
     """Jacobian of softmax with optional precomputed output"""
     s = softmax_output if softmax_output is not None else softmax(x, axis=axis)
     s_moved = np.moveaxis(s, axis, -1)
@@ -58,4 +63,4 @@ def softmax_derivative(
     jacobian = -outer
     diag_indices = np.arange(s_moved.shape[-1])
     jacobian[..., diag_indices, diag_indices] += s_moved
-    return jacobian
+    return cast(ArrayFloat, jacobian)

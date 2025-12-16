@@ -98,8 +98,8 @@ class NeuralNetwork:
 
     def _build_dense_layer(self, config: LayerConfig) -> DenseLayer:
         try:
-            in_features = int(config["in_features"])  # type: ignore[index, call-overload]
-            out_features = int(config["out_features"])  # type: ignore[index, call-overload]
+            in_features = int(config["in_features"])  # type: ignore[call-overload]
+            out_features = int(config["out_features"])  # type: ignore[call-overload]
         except KeyError as exc:
             raise ValueError(
                 "dense layer config requires 'in_features' and 'out_features' keys"
@@ -143,4 +143,4 @@ class NeuralNetwork:
     ) -> ActivationFn | ActivationDerivativeFn:
         if not callable(candidate):
             raise TypeError(f"{name} must be callable when provided")
-        return candidate  # type: ignore[return-value]
+        return candidate

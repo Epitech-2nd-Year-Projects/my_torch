@@ -1,10 +1,12 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from my_torch_analyzer.dataset import load_prediction_dataset
 
 
-def test_load_prediction_dataset(tmp_path):
+def test_load_prediction_dataset(tmp_path: Path) -> None:
     file_path = tmp_path / "prediction_chessboards.txt"
     content = (
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\n"
@@ -26,7 +28,7 @@ def test_load_prediction_dataset(tmp_path):
     assert np.all(inputs[2, 17, :, :] == 1.0)
 
 
-def test_load_prediction_dataset_malformed(tmp_path):
+def test_load_prediction_dataset_malformed(tmp_path: Path) -> None:
     file_path = tmp_path / "malformed.txt"
     file_path.write_text("not a fen\n", encoding="utf-8")
 

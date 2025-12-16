@@ -13,7 +13,9 @@ PYTHON = sys.executable
 CLI_MODULE = "my_torch_analyzer"
 
 
-def run_cli(args, capture_output=True):
+def run_cli(
+    args: list[str], capture_output: bool = True
+) -> subprocess.CompletedProcess[str]:
     """Result of running the CLI with given arguments."""
     return subprocess.run(
         [PYTHON, "-m", CLI_MODULE] + args,
@@ -22,7 +24,7 @@ def run_cli(args, capture_output=True):
     )
 
 
-def create_dummy_network(path: Path):
+def create_dummy_network(path: Path) -> None:
     """Creates a dummy neural network and saves it to the given path."""
     rng = np.random.default_rng(42)
     layer1 = DenseLayer(in_features=1152, out_features=10, activation=relu, rng=rng)
@@ -35,7 +37,7 @@ def create_dummy_network(path: Path):
     save_nn(network, path)
 
 
-def create_dummy_dataset(path: Path, include_labels=True):
+def create_dummy_dataset(path: Path, include_labels: bool = True) -> None:
     """Creates a dummy chess dataset."""
     fens = [
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -54,7 +56,7 @@ def create_dummy_dataset(path: Path, include_labels=True):
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def test_help_output():
+def test_help_output() -> None:
     """Test that --help returns 0 and prints usage."""
     result = run_cli(["--help"])
     assert result.returncode == 0
@@ -62,7 +64,7 @@ def test_help_output():
     assert "DESCRIPTION" in result.stdout
 
 
-def test_integration_train_and_predict(tmp_path):
+def test_integration_train_and_predict(tmp_path: Path) -> None:
     """
     Test a full flow:
     1. Create a network.
@@ -103,7 +105,7 @@ def test_integration_train_and_predict(tmp_path):
         assert line.strip() in ["Nothing", "Check", "Checkmate"]
 
 
-def test_predict_without_valid_file(tmp_path):
+def test_predict_without_valid_file(tmp_path: Path) -> None:
     """Test prediction fails gracefully (exit code 84) with missing file."""
     result = run_cli(
         ["--predict", str(tmp_path / "missing.nn"), str(tmp_path / "chess.txt")]

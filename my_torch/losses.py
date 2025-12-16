@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -72,7 +74,7 @@ def cross_entropy_grad(logits: ArrayFloat, target: ArrayInt) -> ArrayFloat:
     grad = probabilities.copy()
     grad[np.arange(logits_array.shape[0]), target_array] -= 1
     grad /= logits_array.shape[0]
-    return grad
+    return cast(ArrayFloat, grad)
 
 
 def mse_loss(prediction: ArrayFloat, target: ArrayFloat) -> float:
@@ -111,4 +113,6 @@ def mse_grad(prediction: ArrayFloat, target: ArrayFloat) -> ArrayFloat:
     target_array = np.asarray(target, dtype=float)
     if prediction_array.shape != target_array.shape:
         raise ValueError("prediction and target must share the same shape")
-    return 2.0 * (prediction_array - target_array) / prediction_array.size
+    return cast(
+        ArrayFloat, 2.0 * (prediction_array - target_array) / prediction_array.size
+    )

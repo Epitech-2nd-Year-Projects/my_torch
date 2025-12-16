@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from typing import Any, Callable
+
 import numpy as np
 import pytest
 
 from my_torch import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
 
 
-def numerical_gradient(func, values: np.ndarray, epsilon: float = 1e-5) -> np.ndarray:
+def numerical_gradient(
+    func: Callable[[np.ndarray[Any, Any]], float],
+    values: np.ndarray[Any, Any],
+    epsilon: float = 1e-5,
+) -> np.ndarray[Any, Any]:
     grad = np.zeros_like(values, dtype=float)
     for index in np.ndindex(values.shape):
         original = values[index]
@@ -24,7 +30,7 @@ def test_cross_entropy_gradient_matches_finite_difference() -> None:
     logits = rng.normal(size=(3, 4))
     target = np.array([0, 2, 3])
 
-    def loss_fn(current_logits: np.ndarray) -> float:
+    def loss_fn(current_logits: np.ndarray[Any, Any]) -> float:
         return cross_entropy_loss(current_logits, target)
 
     numerical = numerical_gradient(loss_fn, logits.copy())
@@ -34,10 +40,8 @@ def test_cross_entropy_gradient_matches_finite_difference() -> None:
 
 
 def test_cross_entropy_loss_matches_manual_value() -> None:
-    # Two samples, three classes; targets pick class 0 then 2
     logits = np.array([[2.0, 0.0, -2.0], [0.0, 0.0, 2.0]])
     target = np.array([0, 2])
-    # Softmax probabilities
     probs = np.array(
         [
             np.exp([2.0, 0.0, -2.0]) / np.sum(np.exp([2.0, 0.0, -2.0])),
@@ -45,7 +49,7 @@ def test_cross_entropy_loss_matches_manual_value() -> None:
         ]
     )
     manual_loss = -np.log(probs[0, 0]) - np.log(probs[1, 2])
-    manual_loss /= 2  # mean over batch
+    manual_loss /= 2
     computed_loss = cross_entropy_loss(logits, target)
     assert np.allclose(computed_loss, manual_loss)
 
@@ -55,7 +59,7 @@ def test_mse_gradient_matches_finite_difference() -> None:
     prediction = rng.normal(size=(2, 3))
     target = rng.normal(size=(2, 3))
 
-    def loss_fn(current_prediction: np.ndarray) -> float:
+    def loss_fn(current_prediction: np.ndarray[Any, Any]) -> float:
         return mse_loss(current_prediction, target)
 
     numerical = numerical_gradient(loss_fn, prediction.copy())

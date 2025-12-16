@@ -75,7 +75,7 @@ def get_configs() -> Dict[str, List[Dict[str, Any]]]:
     }
 
 
-def run_training(dataset_path: str):
+def run_training(dataset_path: str) -> None:
     print(f"Loading dataset from {dataset_path}...")
     try:
         inputs, labels = load_dataset(dataset_path)
@@ -142,7 +142,7 @@ def run_training(dataset_path: str):
         print(f"  Saved model to {save_filename}")
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Train multiple network configurations on chess dataset."
     )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, Sequence, cast
 
 import numpy as np
 import pytest
@@ -68,7 +68,7 @@ def test_train_returns_metrics_for_train_and_validation() -> None:
     layer.bias.fill(0.0)
 
     class NoOpOptimizer:
-        def step(self, parameters, gradients) -> None:
+        def step(self, parameters: object, gradients: object) -> None:
             return None
 
     history = train(
@@ -102,7 +102,7 @@ def test_train_stops_early_when_patience_is_reached() -> None:
     network = NeuralNetwork([DenseLayer(2, 2)])
 
     class NoOpOptimizer:
-        def step(self, parameters, gradients) -> None:
+        def step(self, parameters: object, gradients: object) -> None:
             return None
 
     history = train(
@@ -141,15 +141,19 @@ def test_train_tracks_best_model_parameters() -> None:
         def __init__(self) -> None:
             self.calls = 0
 
-        def step(self, parameters, gradients) -> None:
+        def step(
+            self,
+            parameters: Sequence[np.ndarray[Any, Any]],
+            gradients: Sequence[np.ndarray[Any, Any]],
+        ) -> None:
             self.calls += 1
-            weights, bias = parameters
             if self.calls == 1:
+                weights, bias = parameters
                 weights[...] = desired_weights
                 bias[...] = desired_bias
             else:
-                weights.fill(0.0)
-                bias.fill(0.0)
+                for param in parameters:
+                    param.fill(0.0)
 
     history = train(
         network,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Any, Tuple
 
 import numpy as np
 
@@ -203,7 +203,7 @@ def _parse_int(value: str, field_name: str) -> int:
         raise FENError(f"{field_name} must be an integer.") from exc
 
 
-def fen_to_tensor(fen: str | FENPosition) -> np.ndarray:
+def fen_to_tensor(fen: str | FENPosition) -> np.ndarray[Any, Any]:
     """Encodes a FEN string or FENPosition into a NumPy tensor.
 
     The output is a (18, 8, 8) float32 NumPy array. The channels are defined as follows:

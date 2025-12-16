@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Sequence
+
 import numpy as np
 import pytest
 
@@ -21,7 +23,7 @@ class DummyNetwork:
         self.grad = np.zeros_like(self.param)
         self._last_input_shape: tuple[int, ...] | None = None
 
-    def forward(self, inputs: np.ndarray) -> np.ndarray:
+    def forward(self, inputs: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
         inputs_array = np.asarray(inputs, dtype=float)
         if inputs_array.ndim != 2 or inputs_array.shape[1] != self.num_features:
             raise ValueError("unexpected input shape")
@@ -31,16 +33,16 @@ class DummyNetwork:
         logits[:, class_idx] = 5.0
         return logits
 
-    def backward(self, grad_output: np.ndarray) -> np.ndarray:
+    def backward(self, grad_output: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
         if self._last_input_shape is None:
             raise RuntimeError("forward must be called before backward")
         batch_size = grad_output.shape[0]
         return np.zeros((batch_size, self.num_features))
 
-    def parameters(self) -> tuple[np.ndarray, ...]:
+    def parameters(self) -> tuple[np.ndarray[Any, Any], ...]:
         return (self.param,)
 
-    def gradients(self) -> tuple[np.ndarray, ...]:
+    def gradients(self) -> tuple[np.ndarray[Any, Any], ...]:
         return (self.grad,)
 
     def zero_grad(self) -> None:
@@ -53,21 +55,23 @@ class ScriptedOptimizer:
     def __init__(self, target_value: float) -> None:
         self.target_value = target_value
 
-    def step(self, parameters, gradients) -> None:  # pragma: no cover - exercised
-        if len(parameters) != len(gradients):
+    def step(
+        self, parameters: Sequence[object], gradients: object
+    ) -> None:  # pragma: no cover - exercised
+        if len(parameters) != len(gradients):  # type: ignore[arg-type]
             raise ValueError("parameters and gradients must have the same length")
         for param in parameters:
             np.asarray(param)[...] = self.target_value
 
 
-def make_builder(num_features: int = 2, num_classes: int = 3):
+def make_builder(num_features: int = 2, num_classes: int = 3) -> Any:
     def builder() -> DummyNetwork:
         return DummyNetwork(num_features=num_features, num_classes=num_classes)
 
     return builder
 
 
-def _common_data() -> tuple[np.ndarray, np.ndarray]:
+def _common_data() -> tuple[np.ndarray[Any, Any], np.ndarray[Any, Any]]:
     features = np.zeros((4, 2), dtype=float)
     labels = np.array([1, 1, 1, 0], dtype=int)
     return features, labels
@@ -77,7 +81,7 @@ def test_grid_search_selects_highest_accuracy_configuration() -> None:
     train_inputs, train_labels = _common_data()
     val_inputs, val_labels = train_inputs.copy(), train_labels.copy()
 
-    def optimizer_factory(config):
+    def optimizer_factory(config: Any) -> ScriptedOptimizer:
         target_class = 1 if config.learning_rate >= 0.05 else 0
         return ScriptedOptimizer(target_value=float(target_class))
 
@@ -108,7 +112,7 @@ def test_random_search_is_reproducible_with_seed() -> None:
     train_inputs, train_labels = _common_data()
     val_inputs, val_labels = train_inputs.copy(), train_labels.copy()
 
-    def optimizer_factory(config):
+    def optimizer_factory(config: Any) -> ScriptedOptimizer:
         target_class = 1 if config.learning_rate >= 0.03 else 0
         return ScriptedOptimizer(target_value=float(target_class))
 
