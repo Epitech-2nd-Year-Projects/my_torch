@@ -30,7 +30,7 @@ def test_cross_entropy_gradient_matches_finite_difference() -> None:
     logits = rng.normal(size=(3, 4))
     target = np.array([0, 2, 3])
 
-    def loss_fn(current_logits: np.ndarray) -> float:
+    def loss_fn(current_logits: np.ndarray[Any, Any]) -> float:
         return cross_entropy_loss(current_logits, target)
 
     numerical = numerical_gradient(loss_fn, logits.copy())
@@ -59,7 +59,7 @@ def test_mse_gradient_matches_finite_difference() -> None:
     prediction = rng.normal(size=(2, 3))
     target = rng.normal(size=(2, 3))
 
-    def loss_fn(current_prediction: np.ndarray) -> float:
+    def loss_fn(current_prediction: np.ndarray[Any, Any]) -> float:
         return mse_loss(current_prediction, target)
 
     numerical = numerical_gradient(loss_fn, prediction.copy())
