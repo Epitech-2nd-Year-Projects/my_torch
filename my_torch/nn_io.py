@@ -194,8 +194,8 @@ def load_network(path: str | Path) -> NeuralNetwork:
     return network
 
 
-def _serialize_parameters(network: NeuralNetwork) -> dict[str, np.ndarray]:
-    arrays: dict[str, np.ndarray] = {}
+def _serialize_parameters(network: NeuralNetwork) -> dict[str, np.ndarray[Any, Any]]:
+    arrays: dict[str, np.ndarray[Any, Any]] = {}
     for idx, layer in enumerate(network.layers):
         dense = _require_dense_layer(layer)
         arrays[f"layer_{idx}_weights"] = np.asarray(dense.weights, dtype=float)

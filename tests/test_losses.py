@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import Any, Callable
 
 import numpy as np
 import pytest
@@ -9,8 +9,10 @@ from my_torch import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
 
 
 def numerical_gradient(
-    func: Callable[[np.ndarray], float], values: np.ndarray, epsilon: float = 1e-5
-) -> np.ndarray:
+    func: Callable[[np.ndarray[Any, Any]], float],
+    values: np.ndarray[Any, Any],
+    epsilon: float = 1e-5,
+) -> np.ndarray[Any, Any]:
     grad = np.zeros_like(values, dtype=float)
     for index in np.ndindex(values.shape):
         original = values[index]

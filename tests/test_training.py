@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Sequence, cast
+from typing import Any, Sequence, cast
 
 import numpy as np
 import pytest
@@ -142,7 +142,9 @@ def test_train_tracks_best_model_parameters() -> None:
             self.calls = 0
 
         def step(
-            self, parameters: Sequence[np.ndarray], gradients: Sequence[np.ndarray]
+            self,
+            parameters: Sequence[np.ndarray[Any, Any]],
+            gradients: Sequence[np.ndarray[Any, Any]],
         ) -> None:
             self.calls += 1
             if self.calls == 1:

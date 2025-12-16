@@ -23,7 +23,7 @@ class DummyNetwork:
         self.grad = np.zeros_like(self.param)
         self._last_input_shape: tuple[int, ...] | None = None
 
-    def forward(self, inputs: np.ndarray) -> np.ndarray:
+    def forward(self, inputs: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
         inputs_array = np.asarray(inputs, dtype=float)
         if inputs_array.ndim != 2 or inputs_array.shape[1] != self.num_features:
             raise ValueError("unexpected input shape")
@@ -33,16 +33,16 @@ class DummyNetwork:
         logits[:, class_idx] = 5.0
         return logits
 
-    def backward(self, grad_output: np.ndarray) -> np.ndarray:
+    def backward(self, grad_output: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
         if self._last_input_shape is None:
             raise RuntimeError("forward must be called before backward")
         batch_size = grad_output.shape[0]
         return np.zeros((batch_size, self.num_features))
 
-    def parameters(self) -> tuple[np.ndarray, ...]:
+    def parameters(self) -> tuple[np.ndarray[Any, Any], ...]:
         return (self.param,)
 
-    def gradients(self) -> tuple[np.ndarray, ...]:
+    def gradients(self) -> tuple[np.ndarray[Any, Any], ...]:
         return (self.grad,)
 
     def zero_grad(self) -> None:
@@ -57,7 +57,7 @@ class ScriptedOptimizer:
 
     def step(
         self, parameters: Sequence[object], gradients: object
-    ) -> None:
+    ) -> None:  # pragma: no cover - exercised
         if len(parameters) != len(gradients):  # type: ignore[arg-type]
             raise ValueError("parameters and gradients must have the same length")
         for param in parameters:
@@ -71,7 +71,7 @@ def make_builder(num_features: int = 2, num_classes: int = 3) -> Any:
     return builder
 
 
-def _common_data() -> tuple[np.ndarray, np.ndarray]:
+def _common_data() -> tuple[np.ndarray[Any, Any], np.ndarray[Any, Any]]:
     features = np.zeros((4, 2), dtype=float)
     labels = np.array([1, 1, 1, 0], dtype=int)
     return features, labels
