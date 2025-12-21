@@ -39,6 +39,11 @@ The primary goal is to demonstrate a machine-learning-based solution trained wit
     pip install -e ".[dev]"
     ```
 
+## Pre-trained model
+
+A pre-trained neural network is provided at the root of the repository:
+-   **`my_torch_network.nn`**: Our best-performing CNN model, ready for evaluation.
+
 ## Usage: `my_torch_analyzer`
 
 The `my_torch_analyzer` command is the main entry point for the project. It supports two modes: `--train` and `--predict`.
