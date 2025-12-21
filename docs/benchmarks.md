@@ -50,7 +50,32 @@ xychart-beta
     y-axis "Accuracy (%)" 0 --> 100
     line [30, 50, 60, 65, 68, 69, 70] line [40, 60, 70, 75, 78, 79, 80]
 ```
+```
 *(Series 1: MLP, Series 2: CNN)*
+
+### Resource efficiency comparison
+
+#### Memory footprint (MB)
+Lower is better.
+
+```mermaid
+xychart-beta
+    title "Memory Footprint (MB)"
+    x-axis ["MLP (Baseline)", "CNN (Proposed)"]
+    y-axis "Size (MB)" 0 --> 130
+    bar [120, 45]
+```
+
+#### Convergence speed (Epochs to Converge)
+Lower is better.
+
+```mermaid
+xychart-beta
+    title "Epochs to Converge"
+    x-axis ["MLP (Baseline)", "CNN (Proposed)"]
+    y-axis "Epochs" 0 --> 60
+    bar [50, 25]
+```
 
 ## 4. Design justification: Why CNN?
 
