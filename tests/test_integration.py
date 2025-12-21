@@ -10,7 +10,7 @@ from my_torch.neural_network import NeuralNetwork
 from my_torch.nn_io import save_nn
 
 PYTHON = sys.executable
-CLI_MODULE = "my_torch_analyzer"
+CLI_MODULE = "my_torch_analyzer_pkg"
 
 
 def run_cli(

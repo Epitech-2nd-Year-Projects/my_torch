@@ -241,7 +241,7 @@ def main() -> int:
             train_cmd = [
                 sys.executable,
                 "-m",
-                "my_torch_analyzer",
+                "my_torch_analyzer_pkg",
                 "--train",
                 "--optimizer",
                 "adamw",

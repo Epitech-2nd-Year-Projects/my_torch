@@ -46,7 +46,7 @@ def _prepare_inputs(network: object, inputs: np.ndarray) -> np.ndarray:
 
 def compute_accuracy(model_path: str, dataset_path: str) -> float:
     from my_torch.nn_io import load_network
-    from my_torch_analyzer.dataset import load_dataset
+    from my_torch_analyzer_pkg.dataset import load_dataset
 
     network = load_network(model_path)
     inputs, labels = load_dataset(dataset_path)

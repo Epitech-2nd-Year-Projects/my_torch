@@ -432,8 +432,8 @@ def main() -> int:
     from my_torch.nn_io import load_network, save_network
     from my_torch.optimizers import AdamW
     from my_torch.training import compute_class_weights, train_validation_split
-    from my_torch_analyzer.dataset import load_dataset
-    from my_torch_analyzer.labels import get_label_from_index, get_num_classes
+    from my_torch_analyzer_pkg.dataset import load_dataset
+    from my_torch_analyzer_pkg.labels import get_label_from_index, get_num_classes
 
     parser = argparse.ArgumentParser(
         description="Train a CNN model and save my_torch_network_best.nn"

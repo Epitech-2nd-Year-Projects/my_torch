@@ -26,9 +26,9 @@ from my_torch.neural_network import NeuralNetwork
 from my_torch.nn_io import save_network
 from my_torch.optimizers import SGD, AdamW, SGDMomentum
 from my_torch.training import compute_class_weights, train, train_validation_split
-from my_torch_analyzer.dataset import load_dataset
-from my_torch_analyzer.fen import mirror_tensor_lr
-from my_torch_analyzer.labels import get_num_classes
+from my_torch_analyzer_pkg.dataset import load_dataset
+from my_torch_analyzer_pkg.fen import mirror_tensor_lr
+from my_torch_analyzer_pkg.labels import get_num_classes
 
 
 class _CrossEntropyAdapter:

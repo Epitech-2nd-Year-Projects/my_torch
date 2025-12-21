@@ -16,8 +16,8 @@ from my_torch.losses import softmax_cross_entropy_with_logits
 from my_torch.nn_io import load_network, save_network
 from my_torch.optimizers import SGD, AdamW, SGDMomentum
 from my_torch.training import compute_class_weights, train, train_validation_split
-from my_torch_analyzer.dataset import load_dataset, load_prediction_dataset
-from my_torch_analyzer.labels import get_label_from_index, get_num_classes
+from my_torch_analyzer_pkg.dataset import load_dataset, load_prediction_dataset
+from my_torch_analyzer_pkg.labels import get_label_from_index, get_num_classes
 
 EXIT_SUCCESS = 0
 EXIT_ERROR = 84

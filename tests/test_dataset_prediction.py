@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from my_torch_analyzer.dataset import load_prediction_dataset
+from my_torch_analyzer_pkg.dataset import load_prediction_dataset
 
 
 def test_load_prediction_dataset(tmp_path: Path) -> None:

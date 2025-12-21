@@ -5,8 +5,8 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
-from my_torch_analyzer.fen import fen_to_tensor, mirror_tensor_lr
-from my_torch_analyzer.labels import get_label_index, simplify_label
+from my_torch_analyzer_pkg.fen import fen_to_tensor, mirror_tensor_lr
+from my_torch_analyzer_pkg.labels import get_label_index, simplify_label
 
 
 def _load_npz_dataset(

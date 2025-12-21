@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from my_torch_analyzer.fen import (
+from my_torch_analyzer_pkg.fen import (
     CastlingRights,
     FENError,
     FENPosition,
