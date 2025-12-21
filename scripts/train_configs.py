@@ -24,7 +24,7 @@ from my_torch.losses import (
 )
 from my_torch.neural_network import NeuralNetwork
 from my_torch.nn_io import save_network
-from my_torch.optimizers import AdamW, SGD, SGDMomentum
+from my_torch.optimizers import SGD, AdamW, SGDMomentum
 from my_torch.training import compute_class_weights, train, train_validation_split
 from my_torch_analyzer.dataset import load_dataset
 from my_torch_analyzer.fen import mirror_tensor_lr
@@ -46,7 +46,9 @@ class _CrossEntropyAdapter:
         _, grad = self._compute(logits, labels)
         return grad
 
-    def _compute(self, logits: np.ndarray, labels: np.ndarray) -> tuple[float, np.ndarray]:
+    def _compute(
+        self, logits: np.ndarray, labels: np.ndarray
+    ) -> tuple[float, np.ndarray]:
         if (
             self._cache_logits is logits
             and self._cache_labels is labels
@@ -324,7 +326,11 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--optimizer", choices=["sgd", "sgd_momentum", "adamw"], default="sgd")
+    parser.add_argument(
+        "--optimizer",
+        choices=["sgd", "sgd_momentum", "adamw"],
+        default="sgd",
+    )
     parser.add_argument("--weight-decay", type=float, default=0.001)
     parser.add_argument("--seed", type=int)
     parser.add_argument("--val-ratio", type=float, default=0.2)

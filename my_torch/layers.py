@@ -319,7 +319,8 @@ class Conv2DLayer:
         x = np.asarray(inputs, dtype=self.weights.dtype)
         if x.ndim != 4:
             raise ValueError(
-                "inputs must be a 4D array of shape (batch_size, channels, height, width)"
+                "inputs must be a 4D array of shape "
+                "(batch_size, channels, height, width)"
             )
         if x.shape[1] != self.in_channels:
             raise ValueError(
@@ -439,7 +440,8 @@ class FlattenLayer:
         x = np.asarray(inputs)
         if x.ndim != 4:
             raise ValueError(
-                "inputs must be a 4D array of shape (batch_size, channels, height, width)"
+                "inputs must be a 4D array of shape "
+                "(batch_size, channels, height, width)"
             )
         self._input_shape = x.shape
         batch_size, channels, height, width = x.shape
@@ -484,7 +486,8 @@ class GlobalAvgPool2D:
         x = np.asarray(inputs)
         if x.ndim != 4:
             raise ValueError(
-                "inputs must be a 4D array of shape (batch_size, channels, height, width)"
+                "inputs must be a 4D array of shape "
+                "(batch_size, channels, height, width)"
             )
         self._input_shape = x.shape
         return np.mean(x, axis=(2, 3), dtype=x.dtype)

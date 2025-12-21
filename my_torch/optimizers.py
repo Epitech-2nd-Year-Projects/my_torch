@@ -61,7 +61,8 @@ class SGD:
             gradients: Sequence of gradients matching ``parameters`` by index.
 
         Raises:
-            ValueError: If sequence lengths differ or parameter/gradient shapes mismatch.
+            ValueError: If sequence lengths differ or parameter/gradient shapes
+                mismatch.
         """
         if len(parameters) != len(gradients):
             raise ValueError("parameters and gradients must have the same length")

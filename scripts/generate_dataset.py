@@ -51,12 +51,17 @@ def _generate_balanced(
     max_plies: int,
     max_games: int,
 ) -> list[tuple[str, Label]]:
-    buckets: dict[Label, set[str]] = {"Check": set(), "Checkmate": set(), "Nothing": set()}
+    buckets: dict[Label, set[str]] = {
+        "Check": set(),
+        "Checkmate": set(),
+        "Nothing": set(),
+    }
     games_played = 0
     while any(len(bucket) < per_class for bucket in buckets.values()):
         if games_played >= max_games:
             raise RuntimeError(
-                f"Could not reach {per_class} samples per class within {max_games} games"
+                f"Could not reach {per_class} samples per class within "
+                f"{max_games} games"
             )
         games_played += 1
         for fen in _sample_game_positions(
@@ -82,7 +87,10 @@ def write_dataset(entries: list[tuple[str, Label]], output: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate a synthetic chess dataset labeled as Nothing/Check/Checkmate"
+        description=(
+            "Generate a synthetic chess dataset labeled as "
+            "Nothing/Check/Checkmate"
+        )
     )
     parser.add_argument(
         "--per-class",

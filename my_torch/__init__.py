@@ -28,7 +28,7 @@ from .nn_io import (
     save_network,
     save_nn,
 )
-from .optimizers import AdamW, SGD, SGDMomentum
+from .optimizers import SGD, AdamW, SGDMomentum
 from .training import EpochMetrics, TrainingHistory, train, train_validation_split
 
 __all__ = [

@@ -5,24 +5,18 @@ import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, Sequence
+from typing import TYPE_CHECKING, Iterator, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
 
+if TYPE_CHECKING:
+    from my_torch.neural_network import NeuralNetwork
+    from my_torch.optimizers import AdamW
+
 ROOT = Path(__file__).parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
-
-from my_torch.activations import relu, relu_derivative
-from my_torch.layers import Conv2DLayer, DenseLayer, DropoutLayer, GlobalAvgPool2D
-from my_torch.losses import softmax_cross_entropy_with_logits
-from my_torch.neural_network import NeuralNetwork
-from my_torch.nn_io import load_network, save_network
-from my_torch.optimizers import AdamW
-from my_torch.training import compute_class_weights, train_validation_split
-from my_torch_analyzer.dataset import load_dataset
-from my_torch_analyzer.labels import get_label_from_index, get_num_classes
 
 ArrayFloat = NDArray[np.floating]
 ArrayInt = NDArray[np.integer]
@@ -113,6 +107,8 @@ def _evaluate(
     label_smoothing: float,
     weight_decay: float,
 ) -> Metrics:
+    from my_torch.losses import softmax_cross_entropy_with_logits
+
     total_loss = 0.0
     total_acc = 0.0
     n = int(inputs.shape[0])
@@ -168,6 +164,10 @@ def _build_network(
     conv_dropout: float,
     dense_dropout: float,
 ) -> NeuralNetwork:
+    from my_torch.activations import relu, relu_derivative
+    from my_torch.layers import Conv2DLayer, DenseLayer, DropoutLayer, GlobalAvgPool2D
+    from my_torch.neural_network import NeuralNetwork
+
     if not conv_channels:
         raise ValueError("conv_channels must contain at least one value")
     if any(c <= 0 for c in conv_channels):
@@ -179,7 +179,8 @@ def _build_network(
     if not (0.0 <= dense_dropout < 1.0):
         raise ValueError("dense_dropout must be in [0,1)")
 
-    layers = []
+    layers: list = []
+
     in_ch = 18
     for out_ch in conv_channels:
         layers.append(
@@ -215,11 +216,15 @@ def _build_network(
         if dense_dropout > 0.0:
             layers.append(DropoutLayer(p=float(dense_dropout), rng=dropout_rng))
 
+    # logits (pas de softmax ici)
     layers.append(DenseLayer(in_features=int(prev), out_features=3, rng=init_rng))
+
     return NeuralNetwork(layers=layers)
 
 
-def _per_class_recall(labels: ArrayInt, preds: ArrayInt, num_classes: int) -> list[float]:
+def _per_class_recall(
+    labels: ArrayInt, preds: ArrayInt, num_classes: int
+) -> list[float]:
     out: list[float] = []
     for k in range(num_classes):
         m = labels == k
@@ -228,7 +233,9 @@ def _per_class_recall(labels: ArrayInt, preds: ArrayInt, num_classes: int) -> li
     return out
 
 
-def _batched_predictions(network: NeuralNetwork, inputs: ArrayFloat, *, batch_size: int) -> ArrayInt:
+def _batched_predictions(
+    network: NeuralNetwork, inputs: ArrayFloat, *, batch_size: int
+) -> ArrayInt:
     preds: list[np.ndarray] = []
     for start in range(0, inputs.shape[0], batch_size):
         xb = inputs[start : start + batch_size]
@@ -263,6 +270,8 @@ def _train(
     use_ema: bool,
     ema_decay: float,
 ) -> tuple[Metrics, int, tuple[ArrayFloat, ...]]:
+    from my_torch.losses import softmax_cross_entropy_with_logits
+
     if epochs <= 0:
         raise ValueError("epochs must be positive")
     if batch_size <= 0:
@@ -316,7 +325,9 @@ def _train(
             yb = train_labels[bidx]
 
             if augment_mirror and mirror_prob > 0.0:
-                xb = _maybe_mirror_augment_batch(xb, rng=augment_rng, mirror_prob=mirror_prob)
+                xb = _maybe_mirror_augment_batch(
+                    xb, rng=augment_rng, mirror_prob=mirror_prob
+                )
 
             logits = network.forward(xb, training=True)
             loss, grad = softmax_cross_entropy_with_logits(
@@ -340,7 +351,10 @@ def _train(
 
             global_step += 1
             optimizer.lr = _cosine_warmup_lr(
-                global_step, total_steps=total_steps, base_lr=base_lr, warmup_steps=warmup_steps
+                global_step,
+                total_steps=total_steps,
+                base_lr=base_lr,
+                warmup_steps=warmup_steps,
             )
             optimizer.step(params, grads)
 
@@ -354,7 +368,10 @@ def _train(
             sum_acc += _batch_accuracy(logits, yb) * bs
             seen += bs
 
-        train_m = Metrics(loss=sum_loss / seen if seen else 0.0, accuracy=sum_acc / seen if seen else 0.0)
+        train_m = Metrics(
+            loss=sum_loss / seen if seen else 0.0,
+            accuracy=sum_acc / seen if seen else 0.0,
+        )
         val_m = _evaluate(
             network,
             val_inputs,
@@ -366,8 +383,11 @@ def _train(
         )
 
         print(
-            f"Epoch {epoch}/{epochs} - train loss {train_m.loss:.4f} acc {train_m.accuracy:.4f} "
-            f"- val loss {val_m.loss:.4f} acc {val_m.accuracy:.4f}"
+            (
+                f"Epoch {epoch}/{epochs} - train loss {train_m.loss:.4f} "
+                f"acc {train_m.accuracy:.4f} - val loss {val_m.loss:.4f} "
+                f"acc {val_m.accuracy:.4f}"
+            )
         )
 
         improved = val_m.loss < (best_val - min_delta)
@@ -408,10 +428,28 @@ def _parse_pos_int_list(values: Sequence[str]) -> list[int]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Train a CNN model and save my_torch_network_best.nn")
+    from my_torch.layers import DropoutLayer
+    from my_torch.nn_io import load_network, save_network
+    from my_torch.optimizers import AdamW
+    from my_torch.training import compute_class_weights, train_validation_split
+    from my_torch_analyzer.dataset import load_dataset
+    from my_torch_analyzer.labels import get_label_from_index, get_num_classes
 
-    parser.add_argument("datasets", nargs="+", type=Path, help="Path(s) to dataset file(s) (.txt or .npz)")
-    parser.add_argument("--val-dataset", type=Path, help="Optional validation dataset path (no random split).")
+    parser = argparse.ArgumentParser(
+        description="Train a CNN model and save my_torch_network_best.nn"
+    )
+
+    parser.add_argument(
+        "datasets",
+        nargs="+",
+        type=Path,
+        help="Path(s) to dataset file(s) (.txt or .npz)",
+    )
+    parser.add_argument(
+        "--val-dataset",
+        type=Path,
+        help="Optional validation dataset path (no random split).",
+    )
 
     parser.add_argument(
         "--output",
@@ -421,7 +459,11 @@ def main() -> int:
         default=Path("my_torch_network_best.nn"),
         help="Output path for the trained .nn model",
     )
-    parser.add_argument("--resume", type=Path, help="Path to an existing .nn model to resume training from")
+    parser.add_argument(
+        "--resume",
+        type=Path,
+        help="Path to an existing .nn model to resume training from",
+    )
 
     parser.add_argument(
         "--conv-channels",
@@ -442,23 +484,36 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument("--check-weight-mult", type=float, default=1.5,)
     parser.add_argument("--val-ratio", type=float, default=0.2)
     parser.add_argument("--seed", type=int)
     parser.add_argument("--patience", type=int, default=12)
     parser.add_argument("--min-delta", type=float, default=1e-4)
     parser.add_argument("--label-smoothing", type=float, default=0.05)
 
-    parser.add_argument("--augment-mirror", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--augment-mirror",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
     parser.add_argument("--mirror-prob", type=float, default=0.5)
 
-    parser.add_argument("--class-weights", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--class-weights",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
     parser.add_argument("--max-grad-norm", type=float, default=1.0)
     parser.add_argument("--warmup-ratio", type=float, default=0.1)
 
     parser.add_argument("--ema", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--ema-decay", type=float, default=0.999)
 
-    parser.add_argument("--cache-npz", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument(
+        "--cache-npz",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
 
     args = parser.parse_args()
 
@@ -474,6 +529,9 @@ def main() -> int:
         print(f"Error: resume model not found: {args.resume}", file=sys.stderr)
         return 84
 
+    if args.check_weight_mult <= 0:
+        print("Error: --check-weight-mult must be positive", file=sys.stderr)
+        return 84
     if args.lr <= 0:
         print("Error: --lr must be positive", file=sys.stderr)
         return 84
@@ -538,7 +596,13 @@ def main() -> int:
             print(f"Error loading dataset {ds}: {exc}", file=sys.stderr)
             return 84
         if x.ndim != 4 or x.shape[1:] != (18, 8, 8):
-            print(f"Error: dataset inputs must have shape (N, 18, 8, 8), got {x.shape} from {ds}", file=sys.stderr)
+            print(
+                (
+                    "Error: dataset inputs must have shape (N, 18, 8, 8), "
+                    f"got {x.shape} from {ds}"
+                ),
+                file=sys.stderr,
+            )
             return 84
         xs.append(np.asarray(x))
         ys.append(np.asarray(y))
@@ -551,7 +615,9 @@ def main() -> int:
     # Validation: external or split
     if args.val_dataset is not None:
         try:
-            val_inputs, val_labels = load_dataset(str(args.val_dataset), cache_npz=args.cache_npz)
+            val_inputs, val_labels = load_dataset(
+                str(args.val_dataset), cache_npz=args.cache_npz
+            )
         except Exception as exc:
             print(f"Error loading val dataset: {exc}", file=sys.stderr)
             return 84
@@ -576,7 +642,12 @@ def main() -> int:
     def _counts(arr: ArrayInt) -> list[int]:
         return np.bincount(np.asarray(arr, dtype=int), minlength=num_classes).tolist()
 
-    print("Train samples:", int(train_inputs.shape[0]), "Val samples:", int(val_inputs.shape[0]))
+    print(
+        "Train samples:",
+        int(train_inputs.shape[0]),
+        "Val samples:",
+        int(val_inputs.shape[0]),
+    )
     print("Train class counts:", _counts(train_labels))
     print("Val class counts:", _counts(val_labels))
 
@@ -584,6 +655,10 @@ def main() -> int:
     if args.class_weights:
         try:
             class_weights = compute_class_weights(train_labels, num_classes)
+            class_weights = np.asarray(class_weights, dtype=np.float32)
+            class_weights[1] *= float(args.check_weight_mult)
+            class_weights /= float(np.mean(class_weights))
+
         except Exception as exc:
             print(f"Error computing class weights: {exc}", file=sys.stderr)
             return 84
@@ -667,7 +742,9 @@ def main() -> int:
             "label_smoothing": float(args.label_smoothing),
             "class_weights": bool(args.class_weights),
             "val_ratio": float(args.val_ratio) if args.val_dataset is None else None,
-            "val_dataset": str(args.val_dataset) if args.val_dataset is not None else None,
+            "val_dataset": (
+                str(args.val_dataset) if args.val_dataset is not None else None
+            ),
             "augment_mirror": bool(args.augment_mirror),
             "mirror_prob": float(args.mirror_prob),
             "warmup_ratio": float(args.warmup_ratio),
@@ -686,7 +763,11 @@ def main() -> int:
     }
 
     save_network(args.output, network, metadata=metadata)
-    print(f"Saved best model to {args.output} (val acc {best_val_metrics.accuracy:.4f} at epoch {best_epoch})")
+    print(
+        "Saved best model to "
+        f"{args.output} (val acc {best_val_metrics.accuracy:.4f} "
+        f"at epoch {best_epoch})"
+    )
     return 0
 
 

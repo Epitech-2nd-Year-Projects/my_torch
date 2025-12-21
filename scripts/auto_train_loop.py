@@ -39,7 +39,10 @@ def main() -> int:
         "--train-path",
         type=Path,
         default=None,
-        help="Fixed training dataset (FEN + label). If omitted, a dataset is generated once and reused.",
+        help=(
+            "Fixed training dataset (FEN + label). "
+            "If omitted, a dataset is generated once and reused."
+        ),
     )
     parser.add_argument(
         "--work-model",
@@ -57,7 +60,10 @@ def main() -> int:
         "--test-path",
         type=Path,
         default=None,
-        help="Optional held-out test file; loop stops only if both train and test accuracy >= threshold.",
+        help=(
+            "Optional held-out test file; loop stops only if both train and test "
+            "accuracy >= threshold."
+        ),
     )
     parser.add_argument(
         "--train-runs",
@@ -220,7 +226,7 @@ def main() -> int:
             )
             return 0
 
-        # Track best model based on test accuracy when available, otherwise train accuracy.
+        # Track best model by test accuracy when available, else train accuracy.
         if test_accuracy is not None and test_accuracy > best_test_accuracy:
             best_test_accuracy = test_accuracy
             shutil.copyfile(args.work_model, args.best_model)
