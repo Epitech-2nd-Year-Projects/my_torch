@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from my_torch_analyzer import main
+from my_torch_analyzer_pkg import main
 
 
 @patch("builtins.print")
@@ -31,8 +31,8 @@ def test_main_help_long(capsys: pytest.CaptureFixture[str]) -> None:
     assert "USAGE" in captured.out
 
 
-@patch("my_torch_analyzer.cli.load_network")
-@patch("my_torch_analyzer.cli.load_prediction_dataset")
+@patch("my_torch_analyzer_pkg.cli.load_network")
+@patch("my_torch_analyzer_pkg.cli.load_prediction_dataset")
 def test_main_predict(
     mock_load_dataset: MagicMock,
     mock_load_network: MagicMock,
@@ -55,11 +55,11 @@ def test_main_predict(
     mock_network.forward.assert_called_once()
 
 
-@patch("my_torch_analyzer.cli.load_network")
-@patch("my_torch_analyzer.cli.load_dataset")
-@patch("my_torch_analyzer.cli.train_validation_split")
-@patch("my_torch_analyzer.cli.train")
-@patch("my_torch_analyzer.cli.save_network")
+@patch("my_torch_analyzer_pkg.cli.load_network")
+@patch("my_torch_analyzer_pkg.cli.load_dataset")
+@patch("my_torch_analyzer_pkg.cli.train_validation_split")
+@patch("my_torch_analyzer_pkg.cli.train")
+@patch("my_torch_analyzer_pkg.cli.save_network")
 def test_main_train(
     mock_save: MagicMock,
     mock_train: MagicMock,
@@ -95,11 +95,11 @@ def test_main_train(
     assert mock_param[0] == 1.0
 
 
-@patch("my_torch_analyzer.cli.load_network")
-@patch("my_torch_analyzer.cli.load_dataset")
-@patch("my_torch_analyzer.cli.train_validation_split")
-@patch("my_torch_analyzer.cli.train")
-@patch("my_torch_analyzer.cli.save_network")
+@patch("my_torch_analyzer_pkg.cli.load_network")
+@patch("my_torch_analyzer_pkg.cli.load_dataset")
+@patch("my_torch_analyzer_pkg.cli.train_validation_split")
+@patch("my_torch_analyzer_pkg.cli.train")
+@patch("my_torch_analyzer_pkg.cli.save_network")
 def test_main_train_with_save(
     mock_save: MagicMock,
     mock_train: MagicMock,

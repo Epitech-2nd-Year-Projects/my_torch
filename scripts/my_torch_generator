@@ -4,6 +4,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parents[1]))
 
+from my_torch.activations import identity, relu, relu_derivative
 from my_torch.config_loader import load_config
 from my_torch.neural_network import NeuralNetwork
 from my_torch.nn_io import save_network
@@ -12,6 +13,7 @@ from my_torch.nn_io import save_network
 def print_usage() -> None:
     print("USAGE")
     print("    ./my_torch_generator config_file_1 nb_1 [config_file_2 nb_2...]")
+    print("    ./my_torch_generator --cnn nb_1 [--cnn nb_2...]")
     print("\nDESCRIPTION")
     print("    config_file_i")
     print(
@@ -22,6 +24,50 @@ def print_usage() -> None:
     print(
         "        Number of neural networks to generate based on the configuration file."
     )
+    print("    --cnn")
+    print("        Generate a recommended CNN architecture for chess planes.")
+
+
+def get_recommended_cnn_config() -> list[dict[str, object]]:
+    return [
+        {
+            "type": "conv2d",
+            "in_channels": 18,
+            "out_channels": 32,
+            "kernel_size": 3,
+            "padding": 1,
+            "activation": relu,
+            "activation_derivative": relu_derivative,
+        },
+        {
+            "type": "conv2d",
+            "in_channels": 32,
+            "out_channels": 64,
+            "kernel_size": 3,
+            "padding": 1,
+            "activation": relu,
+            "activation_derivative": relu_derivative,
+        },
+        {"type": "global_avg_pool2d"},
+        {
+            "type": "dense",
+            "in_features": 64,
+            "out_features": 32,
+            "activation": relu,
+            "activation_derivative": relu_derivative,
+        },
+        {"type": "dropout", "p": 0.3},
+        {
+            "type": "dense",
+            "in_features": 32,
+            "out_features": 3,
+            "activation": identity,
+        },
+    ]
+
+
+def _is_cnn_spec(arg: str) -> bool:
+    return arg == "--cnn"
 
 
 def main() -> None:
@@ -41,7 +87,7 @@ def main() -> None:
     try:
         inputs = []
         for i in range(0, len(args), 2):
-            config_path = Path(args[i])
+            config_value = args[i]
             try:
                 count = int(args[i + 1])
             except ValueError:
@@ -55,13 +101,18 @@ def main() -> None:
                 print(f"Error: Count must be positive (got {count})", file=sys.stderr)
                 sys.exit(84)
 
-            inputs.append((config_path, count))
+            inputs.append((config_value, count))
 
-        for config_path, count in inputs:
-            print(f"Loading config: {config_path}")
-            layer_configs = load_config(config_path)
-
-            stem = config_path.stem
+        for config_value, count in inputs:
+            if _is_cnn_spec(config_value):
+                print("Loading config: recommended chess CNN")
+                layer_configs = get_recommended_cnn_config()
+                stem = "chess_cnn"
+            else:
+                config_path = Path(config_value)
+                print(f"Loading config: {config_path}")
+                layer_configs = load_config(config_path)
+                stem = config_path.stem
 
             for k in range(1, count + 1):
                 nn = NeuralNetwork(layer_configs=layer_configs)

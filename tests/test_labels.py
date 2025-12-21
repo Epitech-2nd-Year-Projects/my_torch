@@ -1,6 +1,6 @@
 import pytest
 
-from my_torch_analyzer.labels import (
+from my_torch_analyzer_pkg.labels import (
     LABEL_CHECK,
     LABEL_CHECK_BLACK,
     LABEL_CHECK_WHITE,

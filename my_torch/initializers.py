@@ -6,6 +6,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 ArrayFloat = NDArray[np.floating]
+FloatDType = np.dtype[np.floating] | type[np.floating]
 InitializerKey = Literal[
     "xavier",
     "xavier_uniform",
@@ -131,6 +132,7 @@ def initialize_weights(
     *,
     mode: InitializerKey = "xavier",
     rng: np.random.Generator | None = None,
+    dtype: FloatDType = np.float32,
 ) -> ArrayFloat:
     """
     Initialize weights for the given shape using a selected strategy
@@ -139,13 +141,15 @@ def initialize_weights(
         shape: Target tensor shape, e.g. (out_features, in_features)
         mode: Initialization key, defaults to "xavier"
         rng: Optional NumPy random number generator
+        dtype: Desired floating dtype for the initialized array
     Returns:
         Array shaped like `shape` populated according to the initializer
     Raises:
         ValueError: when the mode is not a supported initializer
     """
     initializer = get_initializer(mode)
-    return initializer(shape, rng)
+    dtype_resolved = np.dtype(dtype)
+    return initializer(shape, rng).astype(dtype_resolved, copy=False)
 
 
 def initialize_bias(
@@ -154,6 +158,7 @@ def initialize_bias(
     mode: Literal["zeros", "normal", "uniform"] = "zeros",
     rng: np.random.Generator | None = None,
     value: float = 0.0,
+    dtype: FloatDType = np.float32,
 ) -> ArrayFloat:
     """
     Initialize biases for the given shape using a specified policy
@@ -163,15 +168,17 @@ def initialize_bias(
         mode: Policy name; one of "zeros", "normal", or "uniform"
         rng: Optional NumPy random number generator for sampled modes
         value: Fill value used when mode is "zeros"
+        dtype: Desired floating dtype for the bias array
     Returns:
         Array shaped like `shape` initialized with the selected policy
     Raises:
         ValueError: when mode is not one of the supported options
     """
+    dtype_resolved = np.dtype(dtype)
     if mode == "zeros":
-        return np.full(shape, value, dtype=float)
+        return np.full(shape, value, dtype=dtype_resolved)
     if mode == "normal":
-        return _simple_normal(shape, rng)
+        return _simple_normal(shape, rng).astype(dtype_resolved, copy=False)
     if mode == "uniform":
-        return _simple_uniform(shape, rng)
+        return _simple_uniform(shape, rng).astype(dtype_resolved, copy=False)
     raise ValueError("mode must be one of: zeros, normal, uniform")

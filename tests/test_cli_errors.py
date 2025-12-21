@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 PYTHON = sys.executable
-CLI_MODULE = "my_torch_analyzer"
+CLI_MODULE = "my_torch_analyzer_pkg"
 
 
 def run_cli(args: list[str]) -> subprocess.CompletedProcess[str]:

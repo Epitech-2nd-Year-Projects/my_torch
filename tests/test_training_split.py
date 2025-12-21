@@ -66,3 +66,24 @@ def test_train_validation_split_rejects_seed_and_rng_combo() -> None:
 
     with pytest.raises(ValueError):
         train_validation_split(inputs, labels, val_ratio=0.5, seed=1, rng=rng)
+
+
+def test_train_validation_split_stratified_balances_classes() -> None:
+    inputs = np.arange(30, dtype=float).reshape(15, 2)
+    labels = np.array([0] * 5 + [1] * 5 + [2] * 5, dtype=int)
+
+    train_inputs, val_inputs, train_labels, val_labels = train_validation_split(
+        inputs,
+        labels,
+        val_ratio=0.1,
+        stratify=True,
+        seed=3,
+        num_classes=3,
+    )
+
+    assert train_inputs.shape[0] + val_inputs.shape[0] == inputs.shape[0]
+
+    train_counts = np.bincount(train_labels, minlength=3)
+    val_counts = np.bincount(val_labels, minlength=3)
+    assert np.array_equal(train_counts, np.array([4, 4, 4]))
+    assert np.array_equal(val_counts, np.array([1, 1, 1]))

@@ -1,46 +1,45 @@
 PYTHON ?= python3
-VENV ?= .venv
-PYTHON_BIN := $(VENV)/bin/python
-PIP := $(VENV)/bin/pip
-INSTALL_STAMP := $(VENV)/.installed
-RUFF := $(PYTHON_BIN) -m ruff
+BIN := my_torch_analyzer
 
-.PHONY: all re clean fclean run_analyzer test lint
+.PHONY: all re clean fclean run_analyzer test lint compile
 
-all: $(INSTALL_STAMP)
+all: $(BIN)
 
-$(VENV)/bin/python:
-	$(PYTHON) -m venv $(VENV) || $(PYTHON) -m venv --without-pip $(VENV)
-	$(VENV)/bin/python -m pip --version >/dev/null 2>&1 || { \
-		echo "Pip not found, installing..."; \
-		curl -sS https://bootstrap.pypa.io/get-pip.py -o get-pip.py; \
-		$(VENV)/bin/python get-pip.py; \
-		rm get-pip.py; \
-	}
+$(BIN): Makefile
+	@printf '%s\n' \
+		'#!/usr/bin/env python3' \
+		'from __future__ import annotations' \
+		'' \
+		'import os' \
+		'import runpy' \
+		'import sys' \
+		'' \
+		'ROOT = os.path.dirname(os.path.abspath(__file__))' \
+		'if ROOT not in sys.path:' \
+		'    sys.path.insert(0, ROOT)' \
+		'' \
+		'runpy.run_module("my_torch_analyzer_pkg", run_name="__main__")' \
+		> $(BIN)
+	@chmod +x $(BIN)
 
-$(INSTALL_STAMP): $(VENV)/bin/python pyproject.toml
-	$(PYTHON_BIN) -m pip install --upgrade pip
-	$(PYTHON_BIN) -m pip install -e .[dev]
-	touch $(INSTALL_STAMP)
+compile:
+	$(PYTHON) -m compileall my_torch my_torch_analyzer_pkg
 
-run_analyzer: $(INSTALL_STAMP)
-	$(PYTHON_BIN) -m my_torch_analyzer
+run_analyzer: $(BIN)
+	./$(BIN)
 
-test: $(INSTALL_STAMP)
-	$(PYTHON_BIN) -m pytest tests
+test:
+	$(PYTHON) -m pytest tests
 
-lint: $(INSTALL_STAMP)
-	$(PIP) show ruff >/dev/null 2>&1 || $(PIP) install ruff
-	$(PYTHON_BIN) -m compileall my_torch my_torch_analyzer
-	$(RUFF) check my_torch my_torch_analyzer
+lint:
+	$(PYTHON) -m compileall my_torch my_torch_analyzer_pkg
 
 clean:
 	rm -rf build dist .pytest_cache .ruff_cache
 	find . -name "__pycache__" -type d -prune -exec rm -rf {} +
 	find . -name "*.egg-info" -type d -prune -exec rm -rf {} +
-	rm -f $(INSTALL_STAMP)
 
 fclean: clean
-	rm -rf $(VENV)
+	rm -f $(BIN)
 
 re: fclean all

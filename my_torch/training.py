@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import inspect
+import math
 from dataclasses import dataclass
-from typing import Callable, Iterator, Protocol, Sequence
+from typing import Any, Callable, Iterator, Protocol, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
@@ -10,6 +12,7 @@ from .neural_network import NeuralNetwork
 
 ArrayFloat = NDArray[np.floating]
 ArrayInt = NDArray[np.integer]
+IndexArray = NDArray[np.signedinteger[Any]]
 LossFn = Callable[[ArrayFloat, ArrayInt], float]
 LossGradFn = Callable[[ArrayFloat, ArrayInt], ArrayFloat]
 AccuracyFn = Callable[[ArrayFloat, ArrayInt], float]
@@ -17,6 +20,7 @@ AccuracyFn = Callable[[ArrayFloat, ArrayInt], float]
 __all__ = [
     "EpochMetrics",
     "TrainingHistory",
+    "compute_class_weights",
     "train_validation_split",
     "train",
     "Optimizer",
@@ -51,10 +55,30 @@ def _resolve_rng(rng: np.random.Generator | None) -> np.random.Generator:
     return rng if rng is not None else np.random.default_rng()
 
 
+def _forward(
+    network: NeuralNetwork, inputs: ArrayFloat, *, training: bool
+) -> ArrayFloat:
+    forward = network.forward
+    try:
+        signature = inspect.signature(forward)
+    except (TypeError, ValueError):
+        try:
+            return forward(inputs, training=training)
+        except TypeError:
+            return forward(inputs)
+
+    params = signature.parameters
+    if "training" in params:
+        return forward(inputs, training=training)
+    if any(param.kind == inspect.Parameter.VAR_KEYWORD for param in params.values()):
+        return forward(inputs, training=training)
+    return forward(inputs)
+
+
 def _validate_inputs(
     inputs: ArrayFloat, labels: ArrayInt
 ) -> tuple[ArrayFloat, ArrayInt]:
-    inputs_array = np.asarray(inputs, dtype=float)
+    inputs_array = np.asarray(inputs)
     labels_array = np.asarray(labels)
     if inputs_array.shape[0] != labels_array.shape[0]:
         raise ValueError("inputs and labels must share the first dimension")
@@ -65,6 +89,83 @@ def _validate_inputs(
     return inputs_array, labels_array
 
 
+def _stratified_split_indices(
+    labels: ArrayInt,
+    *,
+    val_ratio: float,
+    shuffle: bool,
+    rng: np.random.Generator,
+    num_classes: int | None,
+) -> tuple[IndexArray, IndexArray]:
+    labels_array = np.asarray(labels)
+    num_samples = labels_array.shape[0]
+    if num_classes is not None:
+        if num_classes <= 0:
+            raise ValueError("num_classes must be positive")
+        if np.any((labels_array < 0) | (labels_array >= num_classes)):
+            raise ValueError("labels must be in [0, num_classes)")
+        class_values = np.arange(num_classes)
+    else:
+        class_values = np.unique(labels_array)
+
+    class_groups: list[IndexArray] = []
+    class_counts: list[int] = []
+    for class_value in class_values:
+        indices: IndexArray = np.flatnonzero(labels_array == class_value).astype(
+            np.int64, copy=False
+        )
+        if indices.size == 0:
+            continue
+        if shuffle:
+            rng.shuffle(indices)
+        class_groups.append(indices)
+        class_counts.append(int(indices.size))
+
+    val_counts = []
+    for count in class_counts:
+        val_count = int(np.floor(count * val_ratio))
+        if count > 1:
+            val_count = min(max(val_count, 1), count - 1)
+        val_counts.append(val_count)
+
+    total_val = sum(val_counts)
+    if total_val == 0:
+        if num_samples < 2:
+            raise ValueError("val_ratio produces an empty train or validation split")
+        fallback_index = int(np.argmax(class_counts))
+        val_counts[fallback_index] = 1
+        total_val = 1
+    if total_val >= num_samples:
+        if num_samples < 2:
+            raise ValueError("val_ratio produces an empty train or validation split")
+        fallback_index = int(np.argmax(val_counts))
+        if val_counts[fallback_index] > 0:
+            val_counts[fallback_index] -= 1
+            total_val -= 1
+    if total_val == 0 or total_val == num_samples:
+        raise ValueError("val_ratio produces an empty train or validation split")
+
+    val_indices: list[IndexArray] = []
+    train_indices: list[IndexArray] = []
+    for indices, val_count in zip(class_groups, val_counts):
+        if val_count > 0:
+            val_indices.append(indices[:val_count])
+        if val_count < indices.size:
+            train_indices.append(indices[val_count:])
+
+    val_indices_array: IndexArray = (
+        np.concatenate(val_indices)
+        if val_indices
+        else np.array([], dtype=np.int64)
+    )
+    train_indices_array: IndexArray = (
+        np.concatenate(train_indices)
+        if train_indices
+        else np.array([], dtype=np.int64)
+    )
+    return train_indices_array, val_indices_array
+
+
 def train_validation_split(
     inputs: ArrayFloat,
     labels: ArrayInt,
@@ -73,6 +174,8 @@ def train_validation_split(
     shuffle: bool = True,
     seed: int | None = None,
     rng: np.random.Generator | None = None,
+    stratify: bool = False,
+    num_classes: int | None = None,
 ) -> tuple[ArrayFloat, ArrayFloat, ArrayInt, ArrayInt]:
     """
     Split inputs and labels into training and validation subsets
@@ -85,6 +188,8 @@ def train_validation_split(
         shuffle: Whether to shuffle before splitting
         seed: Optional seed used when constructing the RNG
         rng: Optional NumPy Generator; cannot be combined with seed
+        stratify: Whether to split data while preserving class proportions
+        num_classes: Optional number of classes used when stratifying
     Returns:
         Tuple of (train_inputs, val_inputs, train_labels, val_labels)
     Raises:
@@ -100,16 +205,24 @@ def train_validation_split(
     if not 0.0 < val_ratio < 1.0:
         raise ValueError("val_ratio must be between 0 and 1 (exclusive)")
 
-    val_size = int(np.floor(num_samples * val_ratio))
-    if val_size == 0 or val_size == num_samples:
-        raise ValueError("val_ratio produces an empty train or validation split")
-
     rng_instance = rng if rng is not None else np.random.default_rng(seed)
-    indices = (
-        rng_instance.permutation(num_samples) if shuffle else np.arange(num_samples)
-    )
-    val_indices = indices[:val_size]
-    train_indices = indices[val_size:]
+    if stratify:
+        train_indices, val_indices = _stratified_split_indices(
+            labels_array,
+            val_ratio=val_ratio,
+            shuffle=shuffle,
+            rng=rng_instance,
+            num_classes=num_classes,
+        )
+    else:
+        val_size = int(np.floor(num_samples * val_ratio))
+        if val_size == 0 or val_size == num_samples:
+            raise ValueError("val_ratio produces an empty train or validation split")
+        indices = (
+            rng_instance.permutation(num_samples) if shuffle else np.arange(num_samples)
+        )
+        val_indices = indices[:val_size]
+        train_indices = indices[val_size:]
 
     return (
         inputs_array[train_indices],
@@ -117,6 +230,53 @@ def train_validation_split(
         labels_array[train_indices],
         labels_array[val_indices],
     )
+
+
+def compute_class_weights(
+    labels: ArrayInt,
+    num_classes: int,
+    *,
+    strategy: str = "inverse_freq",
+) -> NDArray[np.floating]:
+    """
+    Compute per-class weights for imbalanced classification
+
+    Args:
+        labels: Integer class labels shaped (num_samples,)
+        num_classes: Total number of classes
+        strategy: Weighting strategy identifier
+    Returns:
+        Array of class weights shaped (num_classes,) with mean weight 1.0
+    Raises:
+        ValueError: when labels are empty or arguments are invalid
+        TypeError: when labels are not integer class indices
+    """
+    labels_array = np.asarray(labels)
+    if labels_array.ndim != 1:
+        raise ValueError("labels must be a 1D array of class indices")
+    if not np.issubdtype(labels_array.dtype, np.integer):
+        raise TypeError("labels must contain integer class indices")
+    if num_classes <= 0:
+        raise ValueError("num_classes must be positive")
+    if labels_array.size == 0:
+        raise ValueError("labels must be non-empty")
+    if np.any((labels_array < 0) | (labels_array >= num_classes)):
+        raise ValueError("labels must be in [0, num_classes)")
+    if strategy != "inverse_freq":
+        raise ValueError("strategy must be 'inverse_freq'")
+
+    counts = np.bincount(
+        labels_array.astype(np.int64), minlength=num_classes
+    ).astype(np.float32)
+    weights = np.zeros(num_classes, dtype=np.float32)
+    nonzero = counts > 0
+    if not np.any(nonzero):
+        raise ValueError("labels must contain at least one class")
+    weights[nonzero] = 1.0 / counts[nonzero]
+    mean_weight = float(np.mean(weights))
+    if mean_weight <= 0.0:
+        raise ValueError("class weights cannot be normalized")
+    return weights / mean_weight
 
 
 def _iter_batches(
@@ -128,7 +288,7 @@ def _iter_batches(
 
 
 def _classification_accuracy(logits: ArrayFloat, labels: ArrayInt) -> float:
-    logits_array = np.asarray(logits, dtype=float)
+    logits_array = np.asarray(logits)
     if logits_array.ndim != 2:
         raise ValueError(
             "logits must be 2D (batch_size, num_classes) to compute accuracy"
@@ -139,7 +299,7 @@ def _classification_accuracy(logits: ArrayFloat, labels: ArrayInt) -> float:
 
 def _compute_l2_loss(network: NeuralNetwork, weight_decay: float) -> float:
     """
-    Compute L2 regularization loss for all network parameters.
+    Compute L2 regularization loss for weight tensors.
 
     Args:
         network: NeuralNetwork whose parameters will be regularized.
@@ -149,7 +309,11 @@ def _compute_l2_loss(network: NeuralNetwork, weight_decay: float) -> float:
     """
     if weight_decay <= 0.0:
         return 0.0
-    l2_sum = sum(float(np.sum(np.square(p))) for p in network.parameters())
+    l2_sum = sum(
+        float(np.sum(np.square(p)))
+        for p in network.parameters()
+        if p.ndim >= 2
+    )
     return 0.5 * weight_decay * l2_sum
 
 
@@ -169,7 +333,7 @@ def _evaluate(
     reg_loss = _compute_l2_loss(network, weight_decay)
 
     for batch_inputs, batch_labels in _iter_batches(inputs, labels, batch_size):
-        logits = network.forward(batch_inputs)
+        logits = _forward(network, batch_inputs, training=False)
         batch_size_actual = batch_labels.shape[0]
         total_loss += (loss_fn(logits, batch_labels) + reg_loss) * batch_size_actual
         weighted_accuracy += accuracy_fn(logits, batch_labels) * batch_size_actual
@@ -198,6 +362,7 @@ def train(
     accuracy_fn: AccuracyFn | None = None,
     weight_decay: float = 0.0,
     early_stopping_patience: int | None = None,
+    max_grad_norm: float | None = None,
 ) -> TrainingHistory:
     """
     Train a network with mini-batch updates and return per-epoch metrics
@@ -222,6 +387,7 @@ def train(
                       directly during their instantiation.
         early_stopping_patience: Optional number of consecutive epochs without
             validation-loss improvement to tolerate before stopping early.
+        max_grad_norm: Optional global norm threshold for gradient clipping.
     Returns:
         TrainingHistory containing train/validation metrics and best model data
     Raises:
@@ -236,6 +402,8 @@ def train(
         raise ValueError("weight_decay must be non-negative")
     if early_stopping_patience is not None and early_stopping_patience <= 0:
         raise ValueError("early_stopping_patience must be positive when provided")
+    if max_grad_norm is not None and max_grad_norm <= 0:
+        raise ValueError("max_grad_norm must be positive when provided")
 
     train_inputs_array, train_labels_array = _validate_inputs(
         train_inputs, train_labels
@@ -254,13 +422,11 @@ def train(
     epochs_since_improvement = 0
 
     for epoch_index in range(epochs):
-        if shuffle:
-            indices = rng_instance.permutation(num_train)
-            epoch_inputs = train_inputs_array[indices]
-            epoch_labels = train_labels_array[indices]
-        else:
-            epoch_inputs = train_inputs_array
-            epoch_labels = train_labels_array
+        indices = (
+            rng_instance.permutation(num_train)
+            if shuffle
+            else np.arange(num_train, dtype=int)
+        )
 
         epoch_loss = 0.0
         epoch_accuracy = 0.0
@@ -268,17 +434,29 @@ def train(
 
         reg_loss = _compute_l2_loss(network, weight_decay)
 
-        for batch_inputs, batch_labels in _iter_batches(
-            epoch_inputs, epoch_labels, batch_size
-        ):
-            logits = network.forward(batch_inputs)
+        for start in range(0, num_train, batch_size):
+            batch_indices = indices[start : start + batch_size]
+            batch_inputs = train_inputs_array[batch_indices]
+            batch_labels = train_labels_array[batch_indices]
+            logits = _forward(network, batch_inputs, training=True)
             batch_loss = loss_fn(logits, batch_labels)
 
             grad_logits = loss_grad_fn(logits, batch_labels)
 
             network.zero_grad()
             network.backward(grad_logits)
-            optimizer.step(network.parameters(), network.gradients())
+            gradients = network.gradients()
+            if max_grad_norm is not None:
+                total_norm_sq = sum(
+                    float(np.sum(np.square(grad))) for grad in gradients
+                )
+                if total_norm_sq > 0.0:
+                    total_norm = math.sqrt(total_norm_sq)
+                    if total_norm > max_grad_norm:
+                        scale = max_grad_norm / total_norm
+                        for grad in gradients:
+                            grad *= scale
+            optimizer.step(network.parameters(), gradients)
 
             batch_size_actual = batch_labels.shape[0]
 

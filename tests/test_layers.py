@@ -12,7 +12,7 @@ def test_dense_layer_preserves_shapes() -> None:
     layer = DenseLayer(in_features=in_features, out_features=out_features, rng=rng)
 
     inputs = rng.standard_normal(size=(batch_size, in_features))
-    outputs = layer.forward(inputs)
+    outputs = layer.forward(inputs, training=False)
     assert outputs.shape == (batch_size, out_features)
 
     grad_output = rng.standard_normal(size=outputs.shape)
@@ -28,7 +28,7 @@ def test_forward_computes_linear_activation() -> None:
     layer.bias = np.array([0.5, -0.5, 1.0])
 
     inputs = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
-    output = layer.forward(inputs)
+    output = layer.forward(inputs, training=False)
 
     expected = inputs @ layer.weights.T + layer.bias
     assert output.shape == expected.shape
@@ -48,7 +48,7 @@ def test_backward_returns_gradients_matching_manual_derivation() -> None:
     inputs = np.array([[2.0, -1.0], [0.0, 1.0]])
     grad_output = np.array([[1.0, 2.0], [-1.0, 0.5]])
 
-    output = layer.forward(inputs)
+    output = layer.forward(inputs, training=False)
     grad_input = layer.backward(grad_output)
 
     pre_activation = inputs @ layer.weights.T + layer.bias
@@ -92,14 +92,14 @@ def test_backward_without_forward_raises() -> None:
 def test_forward_invalid_dimensions_raise() -> None:
     layer = DenseLayer(in_features=2, out_features=2)
     with pytest.raises(ValueError, match="2D array"):
-        layer.forward(np.array([1.0, 2.0, 3.0]))
+        layer.forward(np.array([1.0, 2.0, 3.0]), training=False)
     with pytest.raises(ValueError, match="expected input feature dimension"):
-        layer.forward(np.ones((1, 3)))
+        layer.forward(np.ones((1, 3)), training=False)
 
 
 def test_backward_mismatched_grad_output_raises() -> None:
     layer = DenseLayer(in_features=2, out_features=2)
-    layer.forward(np.ones((1, 2)))
+    layer.forward(np.ones((1, 2)), training=False)
     with pytest.raises(ValueError, match="grad_output shape"):
         layer.backward(np.ones((2, 2)))
 

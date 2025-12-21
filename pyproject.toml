@@ -13,10 +13,10 @@ dependencies = ["numpy>=1.24"]
 dev = ["pytest>=7.0", "ruff>=0.1.0", "black>=24.4.2", "mypy>=1.0"]
 
 [project.scripts]
-my_torch_analyzer = "my_torch_analyzer:main"
+my_torch_analyzer = "my_torch_analyzer_pkg:main"
 
 [tool.setuptools]
-packages = ["my_torch", "my_torch_analyzer"]
+packages = ["my_torch", "my_torch_analyzer_pkg"]
 
 [tool.black]
 line-length = 88
@@ -44,4 +44,3 @@ python_version = "3.10"
 strict = true
 ignore_missing_imports = true
 disallow_subclassing_any = false
-

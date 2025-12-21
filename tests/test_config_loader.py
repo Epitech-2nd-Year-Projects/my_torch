@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 
-from my_torch.activations import relu, sigmoid
+from my_torch.activations import identity, relu, sigmoid
 from my_torch.config_loader import load_config
 
 
@@ -33,6 +33,38 @@ def test_load_valid_config(tmp_path: Any) -> None:
     assert layers[0]["in_features"] == 10
     assert layers[0]["activation"] == relu
     assert layers[1]["activation"] == sigmoid
+
+
+def test_load_config_conv_flatten_dense(tmp_path: Any) -> None:
+    config = {
+        "layers": [
+            {
+                "type": "conv2d",
+                "in_channels": 1,
+                "out_channels": 2,
+                "kernel_size": [3, 3],
+                "stride": 1,
+                "padding": 1,
+                "activation": "relu",
+            },
+            {"type": "flatten"},
+            {
+                "type": "dense",
+                "in_features": 128,
+                "out_features": 3,
+                "activation": "identity",
+            },
+        ]
+    }
+
+    p = tmp_path / "conv_flatten.json"
+    p.write_text(json.dumps(config), encoding="utf-8")
+
+    layers = load_config(p)
+    assert layers[0]["type"] == "conv2d"
+    assert layers[0]["activation"] == relu
+    assert layers[1]["type"] == "flatten"
+    assert layers[2]["activation"] == identity
 
 def test_load_config_defaults(tmp_path: Any) -> None:
     config = {
