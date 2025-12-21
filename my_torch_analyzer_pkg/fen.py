@@ -215,7 +215,7 @@ def mirror_tensor_lr(tensor: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
     if tensor.ndim != 3 or tensor.shape != (18, 8, 8):
         raise ValueError("tensor must have shape (18, 8, 8)")
 
-    mirrored = np.flip(tensor, axis=2).copy()
+    mirrored: np.ndarray[Any, Any] = np.flip(tensor, axis=2).copy()
     mirrored[[13, 14]] = mirrored[[14, 13]]
     mirrored[[15, 16]] = mirrored[[16, 15]]
     return mirrored

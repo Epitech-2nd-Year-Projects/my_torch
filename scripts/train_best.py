@@ -11,7 +11,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
-    from my_torch.neural_network import NeuralNetwork
+    from my_torch.neural_network import NeuralNetwork, TrainableLayer
     from my_torch.optimizers import AdamW
 
 ROOT = Path(__file__).parents[1]
@@ -179,7 +179,7 @@ def _build_network(
     if not (0.0 <= dense_dropout < 1.0):
         raise ValueError("dense_dropout must be in [0,1)")
 
-    layers: list = []
+    layers: list[TrainableLayer] = []
 
     in_ch = 18
     for out_ch in conv_channels:
@@ -242,8 +242,10 @@ def _batched_predictions(
         logits = network.forward(xb, training=False)
         preds.append(np.argmax(logits, axis=1))
     if not preds:
-        return np.array([], dtype=int)
-    return np.concatenate(preds).astype(int, copy=False)
+        empty: ArrayInt = np.array([], dtype=int)
+        return empty
+    preds_array: ArrayInt = np.concatenate(preds).astype(int, copy=False)
+    return preds_array
 
 
 def _train(
@@ -607,12 +609,19 @@ def main() -> int:
         xs.append(np.asarray(x))
         ys.append(np.asarray(y))
 
-    inputs_all = xs[0] if len(xs) == 1 else np.concatenate(xs, axis=0)
-    labels_all = ys[0] if len(ys) == 1 else np.concatenate(ys, axis=0)
+    inputs_all: ArrayFloat = xs[0] if len(xs) == 1 else np.concatenate(xs, axis=0)
+    labels_all: ArrayInt = np.asarray(
+        ys[0] if len(ys) == 1 else np.concatenate(ys, axis=0),
+        dtype=int,
+    )
 
     num_classes = get_num_classes()
 
     # Validation: external or split
+    train_inputs: ArrayFloat
+    train_labels: ArrayInt
+    val_inputs: ArrayFloat
+    val_labels: ArrayInt
     if args.val_dataset is not None:
         try:
             val_inputs, val_labels = load_dataset(
@@ -640,7 +649,8 @@ def main() -> int:
             return 84
 
     def _counts(arr: ArrayInt) -> list[int]:
-        return np.bincount(np.asarray(arr, dtype=int), minlength=num_classes).tolist()
+        counts = np.bincount(np.asarray(arr, dtype=int), minlength=num_classes)
+        return [int(value) for value in counts.tolist()]
 
     print(
         "Train samples:",

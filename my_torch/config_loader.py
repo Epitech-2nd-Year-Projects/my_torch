@@ -195,19 +195,22 @@ def _validate_layer_keys(
 def _normalize_pair_value(
     value: Any, index: int, layer_type: str, key: str
 ) -> int | tuple[int, int]:
-    if isinstance(value, tuple):
+    if isinstance(value, Integral):
+        return int(value)
+    if isinstance(value, (tuple, list)):
         entries = value
-    elif isinstance(value, list):
-        entries = value
-    else:
-        return value
-
-    if len(entries) != 2 or not all(isinstance(entry, Integral) for entry in entries):
-        raise ValueError(
-            f"Layer {index} ({layer_type}): '{key}' must be an int or "
-            "a list of two ints"
-        )
-    return int(entries[0]), int(entries[1])
+        if len(entries) != 2 or not all(
+            isinstance(entry, Integral) for entry in entries
+        ):
+            raise ValueError(
+                f"Layer {index} ({layer_type}): '{key}' must be an int or "
+                "a list of two ints"
+            )
+        return int(entries[0]), int(entries[1])
+    raise ValueError(
+        f"Layer {index} ({layer_type}): '{key}' must be an int or "
+        "a list of two ints"
+    )
 
 
 def _resolve_activation(layer: dict[str, Any], index: int) -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 
@@ -25,7 +25,13 @@ from my_torch.losses import (
 from my_torch.neural_network import NeuralNetwork
 from my_torch.nn_io import save_network
 from my_torch.optimizers import SGD, AdamW, SGDMomentum
-from my_torch.training import compute_class_weights, train, train_validation_split
+from my_torch.training import (
+    LossFn,
+    LossGradFn,
+    compute_class_weights,
+    train,
+    train_validation_split,
+)
 from my_torch_analyzer_pkg.dataset import load_dataset
 from my_torch_analyzer_pkg.fen import mirror_tensor_lr
 from my_torch_analyzer_pkg.labels import get_num_classes
@@ -271,10 +277,12 @@ def run_training(args: argparse.Namespace) -> None:
             if args.class_weights
             else None
         )
+        loss_fn: LossFn
+        loss_grad_fn: LossGradFn
         if class_weights is not None:
             loss_adapter = _CrossEntropyAdapter(class_weights=class_weights)
-            loss_fn = loss_adapter.loss
-            loss_grad_fn = loss_adapter.grad
+            loss_fn = cast(LossFn, loss_adapter.loss)
+            loss_grad_fn = cast(LossGradFn, loss_adapter.grad)
         else:
             loss_fn = cross_entropy_loss
             loss_grad_fn = cross_entropy_grad

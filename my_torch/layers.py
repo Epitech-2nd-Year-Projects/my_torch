@@ -222,7 +222,7 @@ class DenseLayer:
 
         self.grad_weights[...] = grad_z.T @ self._last_input
         self.grad_bias[...] = np.sum(grad_z, axis=0, dtype=self.grad_bias.dtype)
-        grad_input = grad_z @ self.weights
+        grad_input: ArrayFloat = grad_z @ self.weights
         return grad_input
 
     def parameters(self) -> tuple[ArrayFloat, ArrayFloat]:
@@ -327,9 +327,9 @@ class Conv2DLayer:
                 f"expected input channels {self.in_channels}, got {x.shape[1]}"
             )
 
-        kernel_size = self.kernel_size
-        stride = self.stride
-        padding = self.padding
+        kernel_size = _pair(self.kernel_size, name="kernel_size")
+        stride = _pair(self.stride, name="stride")
+        padding = _pair(self.padding, name="padding")
 
         cols = _im2col(x, kernel_size, stride, padding)
         weights_matrix = self.weights.reshape(self.out_channels, -1)
@@ -399,12 +399,15 @@ class Conv2DLayer:
         weights_matrix = self.weights.reshape(self.out_channels, -1)
         grad_cols = np.tensordot(grad_z_flat, weights_matrix, axes=([1], [0]))
         grad_cols = grad_cols.transpose(0, 2, 1)
+        kernel_size = _pair(self.kernel_size, name="kernel_size")
+        stride = _pair(self.stride, name="stride")
+        padding = _pair(self.padding, name="padding")
         grad_input = _col2im(
             grad_cols,
             self._input_shape,
-            self.kernel_size,
-            self.stride,
-            self.padding,
+            kernel_size,
+            stride,
+            padding,
         )
         return grad_input
 
@@ -490,7 +493,11 @@ class GlobalAvgPool2D:
                 "(batch_size, channels, height, width)"
             )
         self._input_shape = x.shape
-        return np.mean(x, axis=(2, 3), dtype=x.dtype)
+        out: ArrayFloat = np.asarray(
+            np.mean(x, axis=(2, 3), dtype=x.dtype),
+            dtype=x.dtype,
+        )
+        return out
 
     def backward(self, grad_output: ArrayFloat) -> ArrayFloat:
         if self._input_shape is None:
@@ -555,11 +562,12 @@ class DropoutLayer:
             self._mask = np.ones(x.shape, dtype=mask_dtype)
             return x
 
-        if self.rng is None:
+        rng = self.rng
+        if not isinstance(rng, np.random.Generator):
             raise RuntimeError("rng not initialized")
 
         keep_prob = np.asarray(1.0 - self.p, dtype=mask_dtype)
-        mask = (self.rng.random(x.shape) >= self.p).astype(mask_dtype, copy=False)
+        mask = (rng.random(x.shape) >= self.p).astype(mask_dtype, copy=False)
         mask = mask / keep_prob
         self._mask = mask
         return x * mask

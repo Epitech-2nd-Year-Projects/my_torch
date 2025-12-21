@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Callable, Iterator, Protocol, Sequence
+from typing import Any, Callable, Iterator, Protocol, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
@@ -11,6 +11,7 @@ from .neural_network import NeuralNetwork
 
 ArrayFloat = NDArray[np.floating]
 ArrayInt = NDArray[np.integer]
+IndexArray = NDArray[np.signedinteger[Any]]
 LossFn = Callable[[ArrayFloat, ArrayInt], float]
 LossGradFn = Callable[[ArrayFloat, ArrayInt], ArrayFloat]
 AccuracyFn = Callable[[ArrayFloat, ArrayInt], float]
@@ -74,7 +75,7 @@ def _stratified_split_indices(
     shuffle: bool,
     rng: np.random.Generator,
     num_classes: int | None,
-) -> tuple[NDArray[np.integer], NDArray[np.integer]]:
+) -> tuple[IndexArray, IndexArray]:
     labels_array = np.asarray(labels)
     num_samples = labels_array.shape[0]
     if num_classes is not None:
@@ -86,10 +87,12 @@ def _stratified_split_indices(
     else:
         class_values = np.unique(labels_array)
 
-    class_groups: list[NDArray[np.integer]] = []
+    class_groups: list[IndexArray] = []
     class_counts: list[int] = []
     for class_value in class_values:
-        indices = np.flatnonzero(labels_array == class_value)
+        indices: IndexArray = np.flatnonzero(labels_array == class_value).astype(
+            np.int64, copy=False
+        )
         if indices.size == 0:
             continue
         if shuffle:
@@ -121,19 +124,23 @@ def _stratified_split_indices(
     if total_val == 0 or total_val == num_samples:
         raise ValueError("val_ratio produces an empty train or validation split")
 
-    val_indices: list[NDArray[np.integer]] = []
-    train_indices: list[NDArray[np.integer]] = []
+    val_indices: list[IndexArray] = []
+    train_indices: list[IndexArray] = []
     for indices, val_count in zip(class_groups, val_counts):
         if val_count > 0:
             val_indices.append(indices[:val_count])
         if val_count < indices.size:
             train_indices.append(indices[val_count:])
 
-    val_indices_array = (
-        np.concatenate(val_indices) if val_indices else np.array([], dtype=int)
+    val_indices_array: IndexArray = (
+        np.concatenate(val_indices)
+        if val_indices
+        else np.array([], dtype=np.int64)
     )
-    train_indices_array = (
-        np.concatenate(train_indices) if train_indices else np.array([], dtype=int)
+    train_indices_array: IndexArray = (
+        np.concatenate(train_indices)
+        if train_indices
+        else np.array([], dtype=np.int64)
     )
     return train_indices_array, val_indices_array
 

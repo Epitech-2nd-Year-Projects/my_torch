@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from numbers import Integral, Real
 from typing import Iterable, Mapping, Protocol, Sequence
+
+import numpy as np
 
 from .layers import (
     ActivationDerivativeFn,
@@ -214,16 +217,27 @@ class NeuralNetwork:
 
     def _build_dropout_layer(self, config: LayerConfig) -> DropoutLayer:
         try:
-            p = float(config["p"])  # type: ignore[call-overload]
+            p_value = config["p"]
         except KeyError as exc:
             raise ValueError("dropout layer config requires 'p' key") from exc
+
+        if not isinstance(p_value, Real):
+            raise TypeError("dropout layer 'p' must be a real number")
+        p = float(p_value)
 
         allowed_keys = {"p", "rng"}
         unexpected = set(config) - (allowed_keys | {"type"})
         if unexpected:
             unknown = ", ".join(sorted(unexpected))
             raise ValueError(f"unexpected keys for dropout layer config: {unknown}")
-        return DropoutLayer(p=p, rng=config.get("rng", None))
+        rng_value = config.get("rng", None)
+        if isinstance(rng_value, Integral):
+            rng_value = int(rng_value)
+        elif rng_value is not None and not isinstance(
+            rng_value, np.random.Generator
+        ):
+            raise TypeError("dropout layer 'rng' must be an int or Generator")
+        return DropoutLayer(p=p, rng=rng_value)
 
     def _build_global_avg_pool2d_layer(self, config: LayerConfig) -> GlobalAvgPool2D:
         allowed_keys: set[str] = set()
@@ -248,9 +262,15 @@ def _normalize_pair(value: object) -> int | tuple[int, int]:
     if isinstance(value, list):
         if len(value) != 2:
             raise ValueError("expected a list of two integers")
+        if not all(isinstance(entry, Integral) for entry in value):
+            raise ValueError("expected a list of two integers")
         return int(value[0]), int(value[1])
     if isinstance(value, tuple):
         if len(value) != 2:
             raise ValueError("expected a tuple of two integers")
+        if not all(isinstance(entry, Integral) for entry in value):
+            raise ValueError("expected a tuple of two integers")
         return int(value[0]), int(value[1])
+    if not isinstance(value, Integral):
+        raise ValueError("expected an integer or pair of integers")
     return int(value)

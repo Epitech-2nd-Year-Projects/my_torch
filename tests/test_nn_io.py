@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import numpy.testing as npt
@@ -76,8 +76,15 @@ def test_save_and_load_network_wrappers(tmp_path: Path) -> None:
     assert len(loaded_network.layers) == 1
 
     loaded_layer: DenseLayer = cast(DenseLayer, loaded_network.layers[0])
-    npt.assert_allclose(loaded_layer.weights, network.layers[0].weights)
-    npt.assert_allclose(loaded_layer.bias, network.layers[0].bias)
+    original_layer: DenseLayer = cast(DenseLayer, network.layers[0])
+    npt.assert_allclose(
+        cast(np.ndarray[Any, Any], loaded_layer.weights),
+        cast(np.ndarray[Any, Any], original_layer.weights),
+    )
+    npt.assert_allclose(
+        cast(np.ndarray[Any, Any], loaded_layer.bias),
+        cast(np.ndarray[Any, Any], original_layer.bias),
+    )
 
 
 def test_serialization_predictions_roundtrip(tmp_path: Path) -> None:
@@ -104,6 +111,7 @@ def test_serialization_predictions_roundtrip(tmp_path: Path) -> None:
     network = NeuralNetwork(layers=[layer1, layer2])
 
     for layer in network.layers:
+        layer = cast(DenseLayer, layer)
         assert np.any(
             layer.weights != 0
         ), "Weights should be initialized to non-zero values"
@@ -127,11 +135,15 @@ def test_serialization_predictions_roundtrip(tmp_path: Path) -> None:
     for i, (orig_layer, loaded_layer) in enumerate(
         zip(network.layers, loaded_network.layers)
     ):
+        orig_layer = cast(DenseLayer, orig_layer)
+        loaded_layer = cast(DenseLayer, loaded_layer)
         npt.assert_allclose(
-            loaded_layer.weights,
-            orig_layer.weights,
+            cast(np.ndarray[Any, Any], loaded_layer.weights),
+            cast(np.ndarray[Any, Any], orig_layer.weights),
             err_msg=f"Layer {i} weights mismatch",
         )
         npt.assert_allclose(
-            loaded_layer.bias, orig_layer.bias, err_msg=f"Layer {i} bias mismatch"
+            cast(np.ndarray[Any, Any], loaded_layer.bias),
+            cast(np.ndarray[Any, Any], orig_layer.bias),
+            err_msg=f"Layer {i} bias mismatch",
         )
