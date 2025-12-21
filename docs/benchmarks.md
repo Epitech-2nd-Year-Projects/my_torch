@@ -50,7 +50,6 @@ xychart-beta
     y-axis "Accuracy (%)" 0 --> 100
     line [30, 50, 60, 65, 68, 69, 70] line [40, 60, 70, 75, 78, 79, 80]
 ```
-```
 *(Series 1: MLP, Series 2: CNN)*
 
 ### Resource efficiency comparison
