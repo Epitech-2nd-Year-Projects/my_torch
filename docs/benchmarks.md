@@ -90,3 +90,19 @@ As shown in the benchmarks, the CNN achieves higher accuracy with significantly 
 
 ### Conclusion
 The CNN architecture is the scientifically superior choice for this specific domain. It leverages the geometric rules of the game, resulting in a more robust, faster, and accurate model.
+
+## 5. References and further reading
+
+Our design choice significantly aligns with state-of-the-art research in computer chess, where Convolutional Neural Networks (and their Residual variants) have largely superseded simpler MLP architectures for board representation.
+
+1.  **Silver, D., et al. (2017).** *"Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm"* (AlphaZero).
+    -   *Relevance*: Demonstrates the dominance of deep convolutional networks (ResNets) for board games, completely replacing the handcrafted features used in older engines.
+    -   [Original paper](https://arxiv.org/abs/1712.01815)
+
+2.  **Oshri, B., & Khandwala, N. (2015).** *"Predicting Moves in Chess using Convolutional Neural Networks"* (Stanford CS231n).
+    -   *Relevance*: Early work demonstrating that CNNs effectively capture spatial tactical patterns that MLPs struggle with.
+    -   (Original report: *Predicting Moves in Chess using Convolutional Neural Networks*)
+
+3.  **Leela Chess Zero (Lc0)**.
+    -   *Relevance*: The strongest open-source neural engine, which exclusively uses a CNN/ResNet architecture, validating our rejection of the MLP approach.
+    -   [Lc0 architecture guide](https://lczero.org/dev/backend/nn/)
