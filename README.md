@@ -79,6 +79,6 @@ Check
 
 ## Documentation and benchmarks
 
--   **Benchmarks**: Detailed benchmark results and performance analysis can be found in `docs/benchmarks.md`.
+-   **Benchmarks**: detailed benchmark comparison between MLP and CNN architectures, justifying our design choices, can be found in [`docs/benchmarks.md`](docs/benchmarks.md).
 -   **NN Format**: Description of the neural network file format is available in [`docs/nn_format.md`](docs/nn_format.md).
 -   **Contributing**: See [`docs/contributing.md`](docs/contributing.md).
