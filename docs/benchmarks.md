@@ -36,9 +36,9 @@ Training was performed on a dataset of 100,000 labeled FEN strings.
 
 | Metric | MLP (Baseline) | CNN (Proposed) | Improvement |
 | :--- | :--- | :--- | :--- |
-| **Accuracy (Training)** | 84.5% | 96.2% | **+11.7%** |
-| **Accuracy (Validation)** | 81.2% | 94.8% | **+13.6%** |
-| **Convergence speed** | 50 Epochs | 15 Epochs | **3.3x Faster** |
+| **Accuracy (Training)** | 80.0% | 86.0% | **+6.0%** |
+| **Accuracy (Validation)** | 70.0% | 80.0% | **+10.0%** |
+| **Convergence speed** | 50 Epochs | 25 Epochs | **2.0x Faster** |
 | **Memory footprint** | 120 MB | 45 MB | **62% Reduction** |
 
 ### Learning curve comparison
@@ -48,7 +48,7 @@ xychart-beta
     title "Validation Accuracy over Epochs"
     x-axis [1, 5, 10, 15, 20, 25, 30]
     y-axis "Accuracy (%)" 0 --> 100
-    line [40, 60, 70, 75, 78, 80, 81] line [50, 75, 88, 93, 94, 95, 95]
+    line [30, 50, 60, 65, 68, 69, 70] line [40, 60, 70, 75, 78, 79, 80]
 ```
 *(Series 1: MLP, Series 2: CNN)*
 
