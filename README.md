@@ -39,6 +39,11 @@ The primary goal is to demonstrate a machine-learning-based solution trained wit
     pip install -e ".[dev]"
     ```
 
+## Pre-trained model
+
+A pre-trained neural network is provided at the root of the repository:
+-   **`my_torch_network.nn`**: Our best-performing CNN model, ready for evaluation.
+
 ## Usage: `my_torch_analyzer`
 
 The `my_torch_analyzer` command is the main entry point for the project. It supports two modes: `--train` and `--predict`.
@@ -61,7 +66,19 @@ my_torch_analyzer --train --save new_network.nn my_torch_network.nn dataset_trai
 
 *Note: In training mode, the `CHESSFILE` must contain FEN strings followed by the expected output (e.g., "Checkmate").*
 
-### 2. Prediction mode (`--predict`)
+### 2. Generating networks
+
+To create new neural networks (e.g., to experiment with different architectures), use the generator script:
+
+```bash
+# Generate a recommended CNN architecture
+./scripts/my_torch_generator --cnn 1
+
+# Generate from a config file
+./scripts/my_torch_generator path/to/config.json 5
+```
+
+### 3. Prediction mode (`--predict`)
 Example: Predict the state of chessboards in `chessboards.txt` using the trained network `my_torch_network.nn`.
 
 ```bash
@@ -79,6 +96,6 @@ Check
 
 ## Documentation and benchmarks
 
--   **Benchmarks**: Detailed benchmark results and performance analysis can be found in `docs/benchmarks.md`.
+-   **Benchmarks**: detailed benchmark comparison between MLP and CNN architectures, justifying our design choices, can be found in [`docs/benchmarks.md`](docs/benchmarks.md).
 -   **NN Format**: Description of the neural network file format is available in [`docs/nn_format.md`](docs/nn_format.md).
 -   **Contributing**: See [`docs/contributing.md`](docs/contributing.md).
