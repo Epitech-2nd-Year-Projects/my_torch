@@ -22,6 +22,16 @@ def test_generator_script_basic(tmp_path: Any) -> None:
     assert (tmp_path / "net_2.nn").exists()
 
 
+def test_generator_script_cnn(tmp_path: Any) -> None:
+    subprocess.run(
+        [sys.executable, str(GENERATOR_SCRIPT), "--cnn", "1"],
+        check=True,
+        cwd=tmp_path,
+    )
+
+    assert (tmp_path / "chess_cnn_1.nn").exists()
+
+
 def test_generator_invalid_args(tmp_path: Any) -> None:
     result = subprocess.run(
         [sys.executable, str(GENERATOR_SCRIPT)], capture_output=True, text=True

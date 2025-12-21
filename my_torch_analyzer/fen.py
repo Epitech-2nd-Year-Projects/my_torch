@@ -203,6 +203,24 @@ def _parse_int(value: str, field_name: str) -> int:
         raise FENError(f"{field_name} must be an integer.") from exc
 
 
+def mirror_tensor_lr(tensor: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
+    """Mirror a board tensor left to right
+
+    Args:
+        tensor: Board tensor shaped 18x8x8
+
+    Returns:
+        Mirrored tensor with castling and en passant aligned
+    """
+    if tensor.ndim != 3 or tensor.shape != (18, 8, 8):
+        raise ValueError("tensor must have shape (18, 8, 8)")
+
+    mirrored = np.flip(tensor, axis=2).copy()
+    mirrored[[13, 14]] = mirrored[[14, 13]]
+    mirrored[[15, 16]] = mirrored[[16, 15]]
+    return mirrored
+
+
 def fen_to_tensor(fen: str | FENPosition) -> np.ndarray[Any, Any]:
     """Encodes a FEN string or FENPosition into a NumPy tensor.
 

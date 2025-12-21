@@ -18,7 +18,7 @@ from .hyperparameter_search import (
     search_hyperparameters,
 )
 from .initializers import get_initializer, initialize_bias, initialize_weights
-from .layers import DenseLayer
+from .layers import Conv2DLayer, DenseLayer, DropoutLayer, FlattenLayer, GlobalAvgPool2D
 from .losses import cross_entropy_grad, cross_entropy_loss, mse_grad, mse_loss
 from .neural_network import NeuralNetwork
 from .nn_io import (
@@ -28,7 +28,7 @@ from .nn_io import (
     save_network,
     save_nn,
 )
-from .optimizers import SGD
+from .optimizers import AdamW, SGD, SGDMomentum
 from .training import EpochMetrics, TrainingHistory, train, train_validation_split
 
 __all__ = [
@@ -57,7 +57,13 @@ __all__ = [
     "train_validation_split",
     "train",
     "DenseLayer",
+    "Conv2DLayer",
+    "DropoutLayer",
+    "FlattenLayer",
+    "GlobalAvgPool2D",
     "SGD",
+    "SGDMomentum",
+    "AdamW",
     "NeuralNetwork",
     "save_network",
     "save_nn",

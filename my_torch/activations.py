@@ -1,11 +1,34 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 ArrayFloat = NDArray[np.floating]
+
+__all__ = [
+    "identity",
+    "identity_derivative",
+    "relu",
+    "relu_derivative",
+    "sigmoid",
+    "sigmoid_derivative",
+    "tanh",
+    "tanh_derivative",
+    "softmax",
+    "softmax_derivative",
+]
+
+
+def identity(x: ArrayFloat) -> ArrayFloat:
+    """Identity activation"""
+    return x
+
+
+def identity_derivative(x: ArrayFloat, *_args: Any, **_kwargs: Any) -> ArrayFloat:
+    """Derivative of identity activation"""
+    return np.ones_like(x)
 
 
 def relu(x: ArrayFloat) -> ArrayFloat:

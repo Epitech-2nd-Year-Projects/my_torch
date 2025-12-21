@@ -12,6 +12,7 @@ from my_torch.training import (
     TrainingHistory,
     _classification_accuracy,
     _validate_inputs,
+    compute_class_weights,
     train,
 )
 
@@ -57,6 +58,16 @@ def test_classification_accuracy_handles_errors() -> None:
     labels = np.array([0, 1, 2], dtype=int)
     with pytest.raises(ValueError):
         _classification_accuracy(logits, labels)
+
+
+def test_compute_class_weights_inverse_frequency() -> None:
+    labels = np.array([0, 0, 1, 2, 2, 2], dtype=int)
+    weights = compute_class_weights(labels, num_classes=3)
+
+    assert weights.shape == (3,)
+    assert weights.dtype == np.float32
+    assert weights[1] > weights[0] > weights[2]
+    assert np.isclose(weights.mean(), 1.0)
 
 
 def test_train_returns_metrics_for_train_and_validation() -> None:

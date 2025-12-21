@@ -9,18 +9,19 @@ import numpy as np
 from numpy.typing import NDArray
 
 from . import activations as activation_module
-from .layers import DenseLayer
+from .layers import Conv2DLayer, DenseLayer, DropoutLayer, FlattenLayer, GlobalAvgPool2D
 from .neural_network import NeuralNetwork, TrainableLayer
 
 ArrayFloat = NDArray[np.floating]
 ActivationRegistry = Mapping[str, Callable[..., ArrayFloat]]
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
+_LEGACY_FORMAT_VERSION = 1
 _METADATA_KEY = "metadata_json"
 _IDENTITY_NAME = "identity"
 
 DEFAULT_ACTIVATIONS: dict[str, Callable[[ArrayFloat], ArrayFloat]] = {
-    _IDENTITY_NAME: lambda x: x,
+    _IDENTITY_NAME: activation_module.identity,
     "relu": activation_module.relu,
     "sigmoid": activation_module.sigmoid,
     "tanh": activation_module.tanh,
@@ -32,7 +33,7 @@ DEFAULT_ACTIVATION_DERIVATIVES: dict[str, Callable[..., ArrayFloat]] = {
     "sigmoid_derivative": activation_module.sigmoid_derivative,
     "tanh_derivative": activation_module.tanh_derivative,
     "softmax_derivative": activation_module.softmax_derivative,
-    f"{_IDENTITY_NAME}_derivative": lambda x, *_args, **_kwargs: np.ones_like(x),
+    f"{_IDENTITY_NAME}_derivative": activation_module.identity_derivative,
 }
 
 
@@ -44,6 +45,7 @@ class SerializedModelMetadata:
     training: Mapping[str, Any] | None
     extras: Mapping[str, Any] | None
     format_version: int = FORMAT_VERSION
+    dtype: str = "float32"
 
 
 def save_nn(
@@ -58,7 +60,7 @@ def save_nn(
 
     The file is a NumPy `.npz` archive containing:
         * metadata_json: UTF-8 JSON with format version, architecture, and metadata
-        * layer_{i}_weights / layer_{i}_bias arrays for each dense layer
+        * layer_{i}_weights / layer_{i}_bias arrays for each parameterized layer
 
     Args:
         network: NeuralNetwork to serialize.
@@ -69,9 +71,11 @@ def save_nn(
     """
 
     architecture = _serialize_architecture(network)
+    dtype = _resolve_network_dtype(network)
     payload: dict[str, Any] = {
         "format": "my_torch.nn",
         "format_version": FORMAT_VERSION,
+        "dtype": dtype.name,
         "architecture": architecture,
     }
     if training_metadata is not None:
@@ -79,7 +83,7 @@ def save_nn(
     if extra_metadata is not None:
         payload["extras"] = dict(extra_metadata)
 
-    arrays = _serialize_parameters(network)
+    arrays = _serialize_parameters(network, dtype=dtype)
     arrays[_METADATA_KEY] = np.array(
         json.dumps(payload, default=_json_default_serializer), dtype=np.dtype("U")
     )
@@ -130,42 +134,42 @@ def load_nn(
         except KeyError as exc:
             raise ValueError("missing metadata_json entry in .nn archive") from exc
         metadata = json.loads(str(metadata_raw.item()))
+        format_version = int(metadata.get("format_version", _LEGACY_FORMAT_VERSION))
         architecture = metadata.get("architecture")
         if not isinstance(architecture, Mapping):
             raise ValueError("architecture metadata is missing or invalid")
 
-        layers = []
         layer_defs = architecture.get("layers", [])
         if not isinstance(layer_defs, list):
             raise ValueError("architecture.layers must be a list")
-        for idx, layer_cfg in enumerate(layer_defs):
-            if not isinstance(layer_cfg, Mapping):
-                raise ValueError("layer configuration entries must be mappings")
-            weights_key = f"layer_{idx}_weights"
-            bias_key = f"layer_{idx}_bias"
-            try:
-                weights = archive[weights_key]
-                bias = archive[bias_key]
-            except KeyError as exc:
-                raise ValueError(
-                    f"missing parameter arrays for layer {idx}: {exc.args[0]}"
-                ) from exc
-            layers.append(
-                _deserialize_layer(
-                    layer_cfg,
-                    weights,
-                    bias,
-                    activation_lookup,
-                    derivative_lookup,
-                )
+
+        dtype = _resolve_metadata_dtype(metadata, archive)
+        if format_version == _LEGACY_FORMAT_VERSION:
+            layers = _deserialize_layers_v1(
+                layer_defs,
+                archive,
+                activation_lookup,
+                derivative_lookup,
+                dtype,
             )
+        elif format_version == FORMAT_VERSION:
+            layers = _deserialize_layers_v2(
+                layer_defs,
+                archive,
+                activation_lookup,
+                derivative_lookup,
+                dtype,
+            )
+        else:
+            raise ValueError(f"unsupported format version {format_version}")
 
     network = NeuralNetwork(layers=layers)
     metadata_obj = SerializedModelMetadata(
         architecture=dict(architecture),
         training=metadata.get("training"),
         extras=metadata.get("extras"),
-        format_version=int(metadata.get("format_version", FORMAT_VERSION)),
+        format_version=format_version,
+        dtype=dtype.name,
     )
     return network, metadata_obj
 
@@ -194,28 +198,34 @@ def load_network(path: str | Path) -> NeuralNetwork:
     return network
 
 
-def _serialize_parameters(network: NeuralNetwork) -> dict[str, np.ndarray[Any, Any]]:
+def _serialize_parameters(
+    network: NeuralNetwork, *, dtype: np.dtype[Any]
+) -> dict[str, np.ndarray[Any, Any]]:
     arrays: dict[str, np.ndarray[Any, Any]] = {}
     for idx, layer in enumerate(network.layers):
-        dense = _require_dense_layer(layer)
-        arrays[f"layer_{idx}_weights"] = np.asarray(dense.weights, dtype=float)
-        arrays[f"layer_{idx}_bias"] = np.asarray(dense.bias, dtype=float)
+        if isinstance(layer, DenseLayer):
+            arrays[f"layer_{idx}_weights"] = np.asarray(layer.weights, dtype=dtype)
+            arrays[f"layer_{idx}_bias"] = np.asarray(layer.bias, dtype=dtype)
+            continue
+        if isinstance(layer, Conv2DLayer):
+            arrays[f"layer_{idx}_weights"] = np.asarray(layer.weights, dtype=dtype)
+            arrays[f"layer_{idx}_bias"] = np.asarray(layer.bias, dtype=dtype)
+            continue
+        if isinstance(layer, (FlattenLayer, DropoutLayer, GlobalAvgPool2D)):
+            continue
+        raise TypeError(
+            "only DenseLayer, Conv2DLayer, FlattenLayer, DropoutLayer, and "
+            "GlobalAvgPool2D instances can be serialized"
+        )
     return arrays
 
 
 def _serialize_architecture(network: NeuralNetwork) -> dict[str, Any]:
     return {
         "layers": [
-            _serialize_dense_layer(_require_dense_layer(layer), idx)
-            for idx, layer in enumerate(network.layers)
+            _serialize_layer(layer, idx) for idx, layer in enumerate(network.layers)
         ]
     }
-
-
-def _require_dense_layer(layer: TrainableLayer) -> DenseLayer:
-    if isinstance(layer, DenseLayer):
-        return layer
-    raise TypeError("only DenseLayer instances can be serialized")
 
 
 def _serialize_dense_layer(layer: DenseLayer, idx: int) -> dict[str, Any]:
@@ -228,6 +238,43 @@ def _serialize_dense_layer(layer: DenseLayer, idx: int) -> dict[str, Any]:
         "index": idx,
         "in_features": layer.in_features,
         "out_features": layer.out_features,
+        "activation": activation_name,
+        "activation_derivative": derivative_name,
+        "weight_initializer": layer.weight_initializer,
+        "bias_initializer": layer.bias_initializer,
+    }
+
+
+def _serialize_layer(layer: TrainableLayer, idx: int) -> dict[str, Any]:
+    if isinstance(layer, DenseLayer):
+        return _serialize_dense_layer(layer, idx)
+    if isinstance(layer, Conv2DLayer):
+        return _serialize_conv2d_layer(layer, idx)
+    if isinstance(layer, FlattenLayer):
+        return {"type": "flatten", "index": idx}
+    if isinstance(layer, DropoutLayer):
+        return {"type": "dropout", "index": idx, "p": layer.p}
+    if isinstance(layer, GlobalAvgPool2D):
+        return {"type": "global_avg_pool2d", "index": idx}
+    raise TypeError(
+        "only DenseLayer, Conv2DLayer, FlattenLayer, DropoutLayer, and "
+        "GlobalAvgPool2D instances can be serialized"
+    )
+
+
+def _serialize_conv2d_layer(layer: Conv2DLayer, idx: int) -> dict[str, Any]:
+    activation_name = _callable_to_name(layer.activation, allow_identity=True)
+    derivative_name = _callable_to_name(layer.activation_derivative)
+    if activation_name == "_identity":
+        activation_name = _IDENTITY_NAME
+    return {
+        "type": "conv2d",
+        "index": idx,
+        "in_channels": layer.in_channels,
+        "out_channels": layer.out_channels,
+        "kernel_size": layer.kernel_size,
+        "stride": layer.stride,
+        "padding": layer.padding,
         "activation": activation_name,
         "activation_derivative": derivative_name,
         "weight_initializer": layer.weight_initializer,
@@ -251,20 +298,91 @@ def _callable_to_name(
 
 
 def _deserialize_layer(
+    index: int,
+    config: Mapping[str, Any],
+    archive: Mapping[str, np.ndarray[Any, Any]],
+    activation_registry: ActivationRegistry,
+    derivative_registry: ActivationRegistry,
+    dtype: np.dtype[Any],
+) -> TrainableLayer:
+    layer_type = str(config.get("type", "dense")).lower()
+    if layer_type == "dense":
+        weights, bias = _require_layer_parameters(archive, index)
+        return _deserialize_dense_layer(
+            index,
+            config,
+            weights,
+            bias,
+            activation_registry,
+            derivative_registry,
+            dtype,
+        )
+    if layer_type == "conv2d":
+        weights, bias = _require_layer_parameters(archive, index)
+        return _deserialize_conv2d_layer(
+            index,
+            config,
+            weights,
+            bias,
+            activation_registry,
+            derivative_registry,
+            dtype,
+        )
+    if layer_type == "flatten":
+        return FlattenLayer()
+    if layer_type == "dropout":
+        if "p" not in config:
+            raise ValueError("dropout layer config missing required 'p' value")
+        return DropoutLayer(p=float(config["p"]))
+    if layer_type == "global_avg_pool2d":
+        return GlobalAvgPool2D()
+    raise ValueError(f"unsupported layer type '{layer_type}' in .nn file")
+
+
+def _require_layer_parameters(
+    archive: Mapping[str, np.ndarray[Any, Any]], index: int
+) -> tuple[ArrayFloat, ArrayFloat]:
+    weights_key = f"layer_{index}_weights"
+    bias_key = f"layer_{index}_bias"
+    try:
+        weights = archive[weights_key]
+        bias = archive[bias_key]
+    except KeyError as exc:
+        raise ValueError(
+            f"missing parameter arrays for layer {index}: {exc.args[0]}"
+        ) from exc
+    return weights, bias
+
+
+def _deserialize_dense_layer(
+    index: int,
     config: Mapping[str, Any],
     weights: ArrayFloat,
     bias: ArrayFloat,
     activation_registry: ActivationRegistry,
     derivative_registry: ActivationRegistry,
+    dtype: np.dtype[Any],
 ) -> DenseLayer:
-    layer_type = config.get("type", "dense")
-    if layer_type != "dense":
-        raise ValueError(f"unsupported layer type '{layer_type}' in .nn file")
     in_features = int(config["in_features"])
     out_features = int(config["out_features"])
 
     activation_name = config.get("activation")
     derivative_name = config.get("activation_derivative")
+    if derivative_name == "<lambda>":
+        derivative_name = f"{_IDENTITY_NAME}_derivative"
+
+    expected_weights_shape = (out_features, in_features)
+    if weights.shape != expected_weights_shape:
+        raise ValueError(
+            f"layer {index} weights shape {weights.shape} does not match "
+            f"expected {expected_weights_shape}"
+        )
+    expected_bias_shape = (out_features,)
+    if bias.shape != expected_bias_shape:
+        raise ValueError(
+            f"layer {index} bias shape {bias.shape} does not match "
+            f"expected {expected_bias_shape}"
+        )
 
     activation_fn = _resolve_activation(
         activation_registry, activation_name, required=False
@@ -273,7 +391,9 @@ def _deserialize_layer(
         derivative_registry, derivative_name, required=False
     )
 
-    identity_fn = activation_registry.get(_IDENTITY_NAME, lambda x: x)
+    identity_fn = activation_registry.get(
+        _IDENTITY_NAME, activation_module.identity
+    )
     dense = DenseLayer(
         in_features=in_features,
         out_features=out_features,
@@ -282,11 +402,144 @@ def _deserialize_layer(
         weight_initializer=config.get("weight_initializer", "xavier"),
         bias_initializer=config.get("bias_initializer", "zeros"),
     )
-    dense.weights = np.asarray(weights, dtype=float)
-    dense.bias = np.asarray(bias, dtype=float)
+    dense.weights = np.asarray(weights, dtype=dtype)
+    dense.bias = np.asarray(bias, dtype=dtype)
     dense.grad_weights = np.zeros_like(dense.weights)
     dense.grad_bias = np.zeros_like(dense.bias)
     return dense
+
+
+def _deserialize_conv2d_layer(
+    index: int,
+    config: Mapping[str, Any],
+    weights: ArrayFloat,
+    bias: ArrayFloat,
+    activation_registry: ActivationRegistry,
+    derivative_registry: ActivationRegistry,
+    dtype: np.dtype[Any],
+) -> Conv2DLayer:
+    in_channels = int(config["in_channels"])
+    out_channels = int(config["out_channels"])
+    kernel_size = _normalize_pair_config(config["kernel_size"], "kernel_size")
+    stride = _normalize_pair_config(config.get("stride", 1), "stride")
+    padding = _normalize_pair_config(config.get("padding", 0), "padding")
+
+    activation_name = config.get("activation")
+    derivative_name = config.get("activation_derivative")
+    if derivative_name == "<lambda>":
+        derivative_name = f"{_IDENTITY_NAME}_derivative"
+
+    expected_weights_shape = (
+        out_channels,
+        in_channels,
+        kernel_size[0],
+        kernel_size[1],
+    )
+    if weights.shape != expected_weights_shape:
+        raise ValueError(
+            f"layer {index} weights shape {weights.shape} does not match "
+            f"expected {expected_weights_shape}"
+        )
+    expected_bias_shape = (out_channels,)
+    if bias.shape != expected_bias_shape:
+        raise ValueError(
+            f"layer {index} bias shape {bias.shape} does not match "
+            f"expected {expected_bias_shape}"
+        )
+
+    activation_fn = _resolve_activation(
+        activation_registry, activation_name, required=False
+    )
+    derivative_fn = _resolve_activation(
+        derivative_registry, derivative_name, required=False
+    )
+
+    identity_fn = activation_registry.get(
+        _IDENTITY_NAME, activation_module.identity
+    )
+    conv = Conv2DLayer(
+        in_channels=in_channels,
+        out_channels=out_channels,
+        kernel_size=kernel_size,
+        stride=stride,
+        padding=padding,
+        activation=activation_fn if activation_fn is not None else identity_fn,
+        activation_derivative=derivative_fn,
+        weight_initializer=config.get("weight_initializer", "he_normal"),
+        bias_initializer=config.get("bias_initializer", "zeros"),
+    )
+    conv.weights = np.asarray(weights, dtype=dtype)
+    conv.bias = np.asarray(bias, dtype=dtype)
+    conv.grad_weights = np.zeros_like(conv.weights)
+    conv.grad_bias = np.zeros_like(conv.bias)
+    return conv
+
+
+def _deserialize_layers_v1(
+    layer_defs: list[Any],
+    archive: Mapping[str, np.ndarray[Any, Any]],
+    activation_registry: ActivationRegistry,
+    derivative_registry: ActivationRegistry,
+    dtype: np.dtype[Any],
+) -> list[TrainableLayer]:
+    layers: list[TrainableLayer] = []
+    for idx, layer_cfg in enumerate(layer_defs):
+        if not isinstance(layer_cfg, Mapping):
+            raise ValueError("layer configuration entries must be mappings")
+        layer_type = str(layer_cfg.get("type", "dense")).lower()
+        if layer_type != "dense":
+            raise ValueError(
+                f"format version {_LEGACY_FORMAT_VERSION} supports dense layers only"
+            )
+        weights, bias = _require_layer_parameters(archive, idx)
+        layers.append(
+            _deserialize_dense_layer(
+                idx,
+                layer_cfg,
+                weights,
+                bias,
+                activation_registry,
+                derivative_registry,
+                dtype,
+            )
+        )
+    return layers
+
+
+def _deserialize_layers_v2(
+    layer_defs: list[Any],
+    archive: Mapping[str, np.ndarray[Any, Any]],
+    activation_registry: ActivationRegistry,
+    derivative_registry: ActivationRegistry,
+    dtype: np.dtype[Any],
+) -> list[TrainableLayer]:
+    layers: list[TrainableLayer] = []
+    for idx, layer_cfg in enumerate(layer_defs):
+        if not isinstance(layer_cfg, Mapping):
+            raise ValueError("layer configuration entries must be mappings")
+        layers.append(
+            _deserialize_layer(
+                idx,
+                layer_cfg,
+                archive,
+                activation_registry,
+                derivative_registry,
+                dtype,
+            )
+        )
+    return layers
+
+
+def _normalize_pair_config(value: Any, name: str) -> tuple[int, int]:
+    if isinstance(value, list):
+        if len(value) != 2:
+            raise ValueError(f"{name} must be a list of two integers")
+        return int(value[0]), int(value[1])
+    if isinstance(value, tuple):
+        if len(value) != 2:
+            raise ValueError(f"{name} must be a tuple of two integers")
+        return int(value[0]), int(value[1])
+    return int(value), int(value)
 
 
 def _resolve_activation(
@@ -308,3 +561,44 @@ def _json_default_serializer(obj: Any) -> Any:
     if isinstance(obj, np.generic):
         return obj.item()
     raise TypeError(f"object of type {type(obj).__name__} is not JSON serializable")
+
+
+def _resolve_network_dtype(network: NeuralNetwork) -> np.dtype[Any]:
+    dtypes: list[np.dtype[Any]] = []
+    for layer in network.layers:
+        if isinstance(layer, (DenseLayer, Conv2DLayer)):
+            dtypes.append(np.asarray(layer.weights).dtype)
+            dtypes.append(np.asarray(layer.bias).dtype)
+    if not dtypes:
+        return np.dtype(np.float32)
+    dtype = np.result_type(*dtypes)
+    if not np.issubdtype(dtype, np.floating):
+        raise ValueError("only floating point dtypes can be serialized")
+    return np.dtype(dtype)
+
+
+def _resolve_metadata_dtype(
+    metadata: Mapping[str, Any],
+    archive: Mapping[str, np.ndarray[Any, Any]],
+) -> np.dtype[Any]:
+    dtype_raw = metadata.get("dtype")
+    if isinstance(dtype_raw, str):
+        try:
+            return np.dtype(dtype_raw)
+        except TypeError as exc:
+            raise ValueError(f"unsupported dtype '{dtype_raw}' in metadata") from exc
+    inferred = _infer_archive_dtype(archive)
+    if inferred is not None:
+        return inferred
+    return np.dtype(np.float32)
+
+
+def _infer_archive_dtype(
+    archive: Mapping[str, np.ndarray[Any, Any]]
+) -> np.dtype[Any] | None:
+    for key in archive.keys():
+        if key == _METADATA_KEY:
+            continue
+        array = archive[key]
+        return np.asarray(array).dtype
+    return None
