@@ -66,7 +66,19 @@ my_torch_analyzer --train --save new_network.nn my_torch_network.nn dataset_trai
 
 *Note: In training mode, the `CHESSFILE` must contain FEN strings followed by the expected output (e.g., "Checkmate").*
 
-### 2. Prediction mode (`--predict`)
+### 2. Generating networks
+
+To create new neural networks (e.g., to experiment with different architectures), use the generator script:
+
+```bash
+# Generate a recommended CNN architecture
+./scripts/my_torch_generator --cnn 1
+
+# Generate from a config file
+./scripts/my_torch_generator path/to/config.json 5
+```
+
+### 3. Prediction mode (`--predict`)
 Example: Predict the state of chessboards in `chessboards.txt` using the trained network `my_torch_network.nn`.
 
 ```bash
