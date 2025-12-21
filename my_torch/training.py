@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import math
 from dataclasses import dataclass
 from typing import Any, Callable, Iterator, Protocol, Sequence
@@ -52,6 +53,26 @@ class TrainingHistory:
 
 def _resolve_rng(rng: np.random.Generator | None) -> np.random.Generator:
     return rng if rng is not None else np.random.default_rng()
+
+
+def _forward(
+    network: NeuralNetwork, inputs: ArrayFloat, *, training: bool
+) -> ArrayFloat:
+    forward = network.forward
+    try:
+        signature = inspect.signature(forward)
+    except (TypeError, ValueError):
+        try:
+            return forward(inputs, training=training)
+        except TypeError:
+            return forward(inputs)
+
+    params = signature.parameters
+    if "training" in params:
+        return forward(inputs, training=training)
+    if any(param.kind == inspect.Parameter.VAR_KEYWORD for param in params.values()):
+        return forward(inputs, training=training)
+    return forward(inputs)
 
 
 def _validate_inputs(
@@ -312,7 +333,7 @@ def _evaluate(
     reg_loss = _compute_l2_loss(network, weight_decay)
 
     for batch_inputs, batch_labels in _iter_batches(inputs, labels, batch_size):
-        logits = network.forward(batch_inputs, training=False)
+        logits = _forward(network, batch_inputs, training=False)
         batch_size_actual = batch_labels.shape[0]
         total_loss += (loss_fn(logits, batch_labels) + reg_loss) * batch_size_actual
         weighted_accuracy += accuracy_fn(logits, batch_labels) * batch_size_actual
@@ -417,7 +438,7 @@ def train(
             batch_indices = indices[start : start + batch_size]
             batch_inputs = train_inputs_array[batch_indices]
             batch_labels = train_labels_array[batch_indices]
-            logits = network.forward(batch_inputs, training=True)
+            logits = _forward(network, batch_inputs, training=True)
             batch_loss = loss_fn(logits, batch_labels)
 
             grad_logits = loss_grad_fn(logits, batch_labels)
